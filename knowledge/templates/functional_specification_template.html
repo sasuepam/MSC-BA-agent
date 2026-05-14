@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Functional Specification — [Feature Name]</title>
+</head>
+<body>
+
+  <h1>Functional Specification &mdash; [Feature Name]</h1>
+  <p>By [Author Name]</p>
+
+  <h2>1. Document Header</h2>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Feature Name</td><td>[Feature Name]</td></tr>
+    <tr><td>Author</td><td>[Author Name]</td></tr>
+    <tr><td>Date</td><td>[DD/MM/YYYY]</td></tr>
+    <tr><td>Status</td><td>[Draft / In Review / Approved]</td></tr>
+    <tr><td>Version</td><td>1.0</td></tr>
+  </table>
+
+  <h2>2. Document History</h2>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>Version</th><th>Author(s)</th><th>Date</th><th>Remarks</th><th>Status</th><th>Tickets</th></tr>
+    <tr><td>1.0</td><td>[Author]</td><td>[DD/MM/YYYY]</td><td>Initial draft</td><td>Draft</td><td>[JIRA-XXX]</td></tr>
+  </table>
+
+  <h2>3. Feature Summary</h2>
+  <p>[Brief description of the feature and its business purpose.]</p>
+
+  <h3>3.1 Reference Documentation</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>Document</th><th>Location / Link</th><th>Notes</th></tr>
+    <tr><td>[Doc Name]</td><td>[URL or path]</td><td>[Notes]</td></tr>
+  </table>
+
+  <h2>4. Solution Scope</h2>
+
+  <h3>4.1 Overview</h3>
+  <p>[High-level description of the solution being delivered.]</p>
+
+  <h3>4.2 Key User Flow Steps</h3>
+  <ol>
+    <li>[Step 1]</li>
+    <li>[Step 2]</li>
+    <li>[Step 3]</li>
+  </ol>
+
+  <h3>4.3 Business Rules</h3>
+  <ul>
+    <li>[Business rule 1]</li>
+    <li>[Business rule 2]</li>
+    <li>[Business rule 3]</li>
+  </ul>
+
+  <h3>4.4 System Integrations</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>Interface ID</th><th>System</th><th>Direction</th><th>Description</th></tr>
+    <tr><td>[INT-XXX]</td><td>[System Name]</td><td>[Inbound / Outbound]</td><td>[Description]</td></tr>
+  </table>
+
+  <h3>4.5 Post-[Feature]-Behaviour</h3>
+  <p>[Describe the expected system state and behaviour after the feature is executed.]</p>
+
+  <h2>5. Functional Requirements</h2>
+
+  <h3>5.1 Requirements Description</h3>
+  <blockquote>
+    As a <strong>[user/system]</strong>, I want <strong>[goal]</strong> so that <strong>[reason/benefit]</strong>.
+  </blockquote>
+  <p>[Supporting narrative if needed.]</p>
+
+  <h3>5.2 Use Case Table</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+      <th>Pre-Condition</th>
+      <th>Actor(s)</th>
+      <th>Use Case</th>
+      <th>Functionality Expected</th>
+      <th>Solution Proposed</th>
+      <th>Impact on MS</th>
+      <th>Open Questions</th>
+    </tr>
+    <tr>
+      <td>[Pre-condition]</td>
+      <td>[Actor]</td>
+      <td>UC-01 [Name]</td>
+      <td>[What the system should do]</td>
+      <td>[How it will be achieved]</td>
+      <td>[MuleSoft impact]</td>
+      <td>[TO BE CONFIRMED]</td>
+    </tr>
+  </table>
+
+  <h2>6. High-Level Impacts</h2>
+
+  <h3>6.1 [Interface ID] &mdash; [Interface Name]</h3>
+  <ul>
+    <li><strong>Purpose:</strong> [What this interface does]</li>
+    <li><strong>Enhancements:</strong> [What is changing or being added]</li>
+    <li><strong>Process:</strong> [Step-by-step flow changes]</li>
+    <li><strong>Key Considerations:</strong> [Any risks, dependencies, or constraints]</li>
+  </ul>
+  <p><em>Add one subsection per impacted interface.</em></p>
+
+  <h2>7. In Scope</h2>
+
+  <h3>7.1 [System Name]</h3>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>JIRA Ticket</th><th>Description</th></tr>
+    <tr><td>[JIRA-XXX]</td><td>[Ticket description]</td></tr>
+  </table>
+  <p><em>Add one subsection per system in scope.</em></p>
+
+  <h2>8. Test Scenarios</h2>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>Use Case</th><th>Test Cases</th><th>Test Data</th></tr>
+    <tr><td>UC-01 [Name]</td><td>[Test case description]</td><td>[Data required]</td></tr>
+  </table>
+
+  <h2>9. Non-Functional Requirements</h2>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>Requirement ID</th><th>Interface</th><th>Requirement Description</th><th>Category</th><th>Priority</th></tr>
+    <tr><td>NFR-01</td><td>[Interface]</td><td>[Description]</td><td>[Performance / Security / Availability]</td><td>[High / Medium / Low]</td></tr>
+  </table>
+
+  <h2>Gaps &amp; Open Items</h2>
+  <p><em>Mark unknown or unconfirmed content as [TO BE CONFIRMED]. Mark inferred content as *(inferred)*.</em></p>
+  <table border="1" cellpadding="5" cellspacing="0">
+    <tr><th>#</th><th>Gap / Open Item</th><th>Owner</th><th>Due Date</th></tr>
+    <tr><td>1</td><td>[Description]</td><td>[Name]</td><td>[DD/MM/YYYY]</td></tr>
+  </table>
+
+</body>
+</html>
