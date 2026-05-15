@@ -20,7 +20,7 @@ The spec covers the **overall solution** in the Feature Summary and Business Req
 | Business Requirements | Functional/solution-level user stories — what the solution must do from the business perspective, not API-specific |
 | Use Cases | Functional use cases of the solution — describe the end-to-end flow from the user/system perspective, but **name the MuleSoft API called** within the Functionality Expected column |
 | Non-Functional Requirements | **API-specific** — SLA, throughput, error handling, security (OAuth/mTLS/client credentials), retry policy, availability |
-| Test Scenarios & Acceptance Criteria | **API-specific** — request/response pairs, HTTP status codes, error scenarios, boundary conditions, integration happy-path flows |
+| Test Scenarios & Acceptance Criteria | **API-specific** — focus on: (1) the **experience API** consumed by the requestor (happy path, error paths, boundary conditions, HTTP status codes); (2) **propagation to downstream interfaces only where changes have been made** to those interfaces. Do not test infrastructure connectivity — assume all downstream connections are already in place. |
 
 Always distinguish between what the MuleSoft team owns (the API contract and implementation) and what is owned by upstream or downstream systems. If a requirement belongs to another team, note it in Open Questions.
 
@@ -31,7 +31,9 @@ Always distinguish between what the MuleSoft team owns (the API contract and imp
 - Business requirements must use the user story format: "As a [actor] I want to [action] so that [benefit]". Number them BR-001, BR-002, …
 - Use Cases must be numbered UC-001, UC-002, … Each must name the MuleSoft API called in the Functionality Expected column. All five fields must be populated or marked `[TO BE CONFIRMED]`.
 - Non-functional requirements must be numbered NFR-001, NFR-002, … and be written at the API level — include Interface (the API name), Category, and Priority.
-- Test scenarios must map back to a Use Case reference and be written as API-level tests (HTTP method, endpoint, payload, expected HTTP status, response body). Each row must include Acceptance Criteria and Test Data (or `[TO BE CONFIRMED]`).
+- Test scenarios must map back to a Use Case reference and be written as API-level tests (HTTP method, endpoint, payload, expected HTTP status, response body). Each row must include Acceptance Criteria and Test Data.
+- **Test scenario scope:** Always test the experience API (the API the requestor calls). Only include downstream propagation test cases for interfaces where a change has been made. Do not include connectivity tests — assume all downstream connections are in place.
+- **Test Data column:** Do not write actual data values or `[TO BE CONFIRMED]`. Instead, describe what test data needs to be prepared or requested — e.g. "Booking request with a valid phone number and country code", "Booking request for a cruise with flight (INT007 variant)", "Request payload that triggers error BKG_REG_1". This guides the BA or tester on what to set up before executing the test.
 - All dates use DD/MMM/YYYY format.
 - The output file must be plain HTML — **no `<style>` blocks, no inline `style=` attributes, no CSS classes, no external CSS or JS dependencies**. Use only `border="1" cellpadding="5" cellspacing="0"` on tables. Priority values (High / Medium / Low) are written as plain text, not styled spans.
 
@@ -265,7 +267,7 @@ Save a single HTML file using the template below. Fill every section from the so
     <td>UC-001</td>
     <td>[Given … When … Then … description of the API-level test scenario, including HTTP method, endpoint, and payload where known]</td>
     <td>[The condition that must be true for the test to pass, e.g. HTTP 200 returned with expected response body]</td>
-    <td>[Sample request values, system state, or TO BE CONFIRMED]</td>
+    <td>[Description of what test data needs to be prepared or requested, e.g. "Booking request with valid phone number and country code", "Request payload missing mobilePhone for first passenger", "Request that triggers error BKG_REG_1". Do not write actual field values here.]</td>
   </tr>
 </table>
 
