@@ -16,7 +16,7 @@ You need **two terminals** open each time you work.
 
 **Terminal 1 — MCP server** (keep this running in the background):
 ```bash
-cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent\mcp"
+cd "C:\Users\[your_user]\MSC- Mule BA Agent\mcp"
 uv run msc-mcp-server
 ```
 
@@ -27,7 +27,7 @@ MSC BA MCP Server running on http://localhost:8080
 
 **Terminal 2 — Claude Code** (this is where you work):
 ```bash
-cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent"
+cd "C:\Users\[your_user]\MSC- Mule BA Agent"
 codemie-claude
 ```
 
@@ -59,7 +59,7 @@ Choose the option that matches what you need. Claude will guide you through each
 When prompted for input materials, you can provide any combination of:
 
 - **Pasted text** — copy and paste an email, Teams message, meeting notes, or requirements description directly into the chat
-- **File paths** — e.g. `C:\Users\Sarah_Suda\Documents\requirements.docx`
+- **File paths** — e.g. `C:\Users\[your_user]\Documents\requirements.docx`
 - **Confluence page URLs** — e.g. `https://msccruises.atlassian.net/wiki/spaces/...`
 
 The more detail you provide, the fewer `[TO BE CONFIRMED]` gaps will appear in the output.
@@ -103,7 +103,7 @@ Check that Terminal 1 is still running. If it stopped, restart it with `uv run m
 **Claude is not responding to `/ba-workflow`**
 Make sure you are in the project directory when you launch Claude Code:
 ```bash
-cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent"
+cd "C:\Users\[your_user]\MSC- Mule BA Agent"
 codemie-claude
 ```
 

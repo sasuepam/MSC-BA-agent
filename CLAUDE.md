@@ -11,7 +11,7 @@ It takes raw input materials — pasted text, existing documents, or Confluence 
 Open a terminal, navigate to the project, and run:
 
 ```bash
-cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent"
+cd "C:\Users\[your_user]\MSC- Mule BA Agent"
 codemie-claude -p "/ba-workflow"
 ```
 
@@ -112,7 +112,7 @@ output/
 The Jira and Confluence tools require the local MCP server to be running. Start it in a second terminal before using any publish agents:
 
 ```bash
-cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent\mcp"
+cd "C:\Users\[your_user]\MSC- Mule BA Agent\mcp"
 uv run msc-mcp-server
 ```
 
