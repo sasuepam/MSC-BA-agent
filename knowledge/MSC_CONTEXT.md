@@ -4,68 +4,87 @@
 
 **Client:** MSC Cruises (Italy) — large cruise operator  
 **Team:** EINT (Enterprise Integration) team at EPAM  
-**Platform:** MuleSoft Anypoint + Confluence (msccruises.atlassian.net)  
-**AI Platform:** Codemie (EPAM internal)  
+**Platform:** MuleSoft Anypoint + Confluence (msccruises.atlassian.net) + Jira (msccruises.atlassian.net)  
+**AI Platform:** Codemie (EPAM internal) / Claude Code  
 **Program:** DTTP — Digital Transformation Program  
+**Project location:** `C:\Users\Sarah_Suda\MSC- Mule BA Agent`  
 
 ---
 
 ## What We're Building
 
-AI agent that assists Business Analysts in producing BA documentation for the MSC MuleSoft integration program.
+AI-assisted BA toolkit for the MSC Cruises MuleSoft Integration team. The BA is embedded in the MuleSoft team and receives requirements from the broader DTTP programme. The toolkit translates those requirements into structured documentation scoped to what the MuleSoft team needs to deliver.
 
-The agent helps generate and structure:
-- **Functional Specifications** — full 9-section structured spec documents from raw inputs (IAs, Miro boards, JIRA tickets, pasted text)
+The toolkit generates and structures:
+- **Functional Specifications** — structured HTML spec documents based on the MSC Mulesoft Requirements Template, covering the overall solution with NFRs and test scenarios scoped to the API layer
 - **User Stories** — Jira-ready US stories for new interfaces
 - **Change Requests** — Jira-ready CR stories for changes to existing interfaces
+- **Validation reports** — quality checks flagging gaps, vague ACs, ADF slippage, and wrong CR/US splits
+- **Confluence drafts** — updates to existing Confluence requirements pages (BA sections only, always saved as draft)
+- **Jira updates** — updates to existing Jira ticket descriptions and acceptance criteria
+
+---
+
+## Pipeline
+
+```
+Input materials
+      │
+      ▼
+functional-spec-generator  →  output/specs/functional_spec_[name].html
+      │
+      ▼
+ba-story-generator         →  output/stories/[name].md
+      │
+      ▼
+ba-validator               →  output/validation/validation-report.md
+      │
+      ▼
+ba-amend (skill)           →  fixes applied interactively to specs and stories
+      │
+      ├──→ jira-publisher        →  updates existing Jira tickets
+      └──→ confluence-publisher  →  saves draft to existing Confluence page
+```
+
+Orchestrated end-to-end via the `/ba-workflow` skill.
 
 ---
 
 ## Available Agents
 
 ### functional-spec-generator
-**Location:** `C:\Users\Sarah_Suda\functional-spec-generator`  
 **Agent file:** `.claude\agents\functional-spec-generator.md`  
-**Description:** Generates a structured Functional Specification document from raw input materials such as pasted text, interface agreements, Miro board URLs, JIRA tickets, or file paths.  
-**Output:** `.docx` Word document saved to `C:\Users\Sarah_Suda\functional-spec-generator\output\`  
-**Invoke when:** User wants to create a functional spec or process source documents into a spec.
+**Output:** `output\specs\functional_spec_[feature_name].html`  
+**Invoke when:** User wants to create a functional spec from raw input materials.
 
-**Accepts:**
-- Pasted text (Confluence, Word, email, JIRA, chat)
-- File paths (reads via Read tool)
-- Miro board URLs (fetches via WebFetch)
-- Interface Agreements (IAs)
-- JIRA tickets or epics
+**Accepts:** Pasted text, file paths, Confluence page URLs, Miro board URLs, Jira tickets
 
-**Output template — 9 sections:**
+**Output template — based on MSC Mulesoft Requirements Template:**
 
-| Section | Title |
+| Section | Scope |
 |---|---|
-| 1 | Document Header |
-| 2 | Document History |
-| 3 | Feature Summary + Reference Documentation |
-| 4 | Solution Scope (Overview, User Flow, Business Rules, Integrations, Post-Behaviour) |
-| 5 | Functional Requirements / Use Cases |
-| 6 | High-Level Impacts (one subsection per interface) |
-| 7 | In Scope (JIRA tickets by system) |
-| 8 | Test Scenarios |
-| 9 | Non-Functional Requirements |
+| Document History | Version, Author, Date, Remarks, Status, Tickets |
+| Reference Documentation | Links to source documents |
+| Feature Summary | Overall solution context — business problem and value |
+| Business Requirements | Solution-level user stories (As a… I want… So that…) — not API-specific |
+| Use Cases | Functional solution flows — names the MuleSoft API called in Functionality Expected column |
+| Non-Functional Requirements | **API-specific** — SLA, security, throughput, error handling |
+| Test Scenarios & Acceptance Criteria | **API-specific** — HTTP request/response, status codes, error scenarios |
 
 **Key rules:**
 - Never invent content — gaps marked as `[TO BE CONFIRMED]`
-- Preserve all IDs exactly (INT118, MDTTPU-877, etc.)
-- Process steps → numbered lists; Business rules → bulleted lists
-- Tables mandatory for: document history, reference docs, use case, test scenarios, NFRs
-- Inferred content marked inline with `*(inferred)*`
+- Business Requirements and Use Cases are solution-level (not API-specific)
+- NFRs and Test Scenarios are scoped to the MuleSoft API layer
+- Use Cases name the MuleSoft API called in the Functionality Expected column
+- Output is a self-contained HTML file
 
 ---
 
 ### ba-story-generator
-**Location:** `C:\Users\Sarah_Suda\ba-story-generator`  
 **Agent file:** `.claude\agents\ba-story-generator.md`  
-**Description:** Generates Jira-ready BA stories (Change Requests and User Stories) from a functional specification file (`.txt` or `.pdf`).  
-**Output:** Markdown file saved to `C:\Users\Sarah_Suda\ba-story-generator\output\`  
-**Invoke when:** User wants to generate BA stories or process a spec file into CRs and/or User Stories.
+**Input:** HTML spec from `output\specs\`  
+**Output:** `output\stories\[feature_name].md`  
+**Invoke when:** User wants to generate Jira-ready BA stories from a functional spec.
 
 **Story types:**
 - `CR` / Change Request → changes to existing interfaces
@@ -75,11 +94,108 @@ The agent helps generate and structure:
 **Splitting logic:**
 - **ADF interfaces** (e.g. ADF108) → always excluded, owned by another team
 - **New interfaces** → one individual User Story each, never grouped
-- **Existing interface changes** → group CRs by same change detail or same logical feature
+- **Same change across multiple interfaces** → one CR
+- **Multiple changes under same feature** → one CR
+- **Different features** → separate CRs
 
-**CR template fields:** Summary, Change Scope, Rationale, Resources (links), Acceptance Criteria (BDD Given/When/Then)
+**CR template fields:** Summary, Change Scope, Rationale, Resources (links), Acceptance Criteria (BDD)
 
 **US template fields:** Summary, User Story Statement, Interface Name, Purpose, Users, Use Cases, Functionality (Auth / Happy Path / Alternative Paths / Error Scenarios), Documentation, Acceptance Criteria (BDD)
+
+---
+
+### ba-validator
+**Agent file:** `.claude\agents\ba-validator.md`  
+**Input:** All files in `output\specs\` and `output\stories\`  
+**Output:** `output\validation\validation-report.md`  
+**Invoke when:** User wants to validate quality of generated specs and stories before publishing.
+
+**Validation rules:**
+
+| Rule | Severity | Checks |
+|---|---|---|
+| 1 — TBC fields | BLOCKER | Any `[TO BE CONFIRMED]` still present |
+| 2 — Vague ACs | WARNING | Missing Given/When/Then, no measurable outcome, happy-path only |
+| 3 — Missing doc links | INFO | Blank Confluence/API doc/HLA fields |
+| 4 — ADF slippage | BLOCKER | ADF-prefixed interfaces in any story |
+| 5 — Wrong CR/US split | BLOCKER | New interface given CR, existing change given US, over/under-splitting |
+| 6 — No system owner | WARNING | Users field blank, Change Scope missing owning system |
+| 7 — Untested use cases | WARNING | UC-IDs in spec with no matching test scenario or story AC |
+| 8 — Uncovered BRs | INFO | Business requirements with no traceable story |
+
+---
+
+### jira-publisher
+**Agent file:** `.claude\agents\jira-publisher.md`  
+**Input:** Jira ticket key/URL + story from `output\stories\`  
+**MCP tools:** `jira_get_issue`, `jira_update_issue` only  
+**Invoke when:** User wants to push a generated story to an existing Jira ticket.
+
+**Rules:**
+- Updates description and acceptance criteria fields only
+- Never creates, deletes, or transitions tickets
+- Shows a preview and asks for confirmation before writing
+- Verifies the update by re-fetching the ticket after writing
+
+---
+
+### confluence-publisher
+**Agent file:** `.claude\agents\confluence-publisher.md`  
+**Input:** Confluence page URL + spec from `output\specs\`  
+**MCP tools:** `confluence_get_page`, `confluence_update_page` only  
+**Invoke when:** User wants to push a generated spec to an existing Confluence requirements page.
+
+**Rules:**
+- Always saves as `draft` — never publishes directly
+- Never creates or deletes pages
+- Checks for concurrent edit lock before writing
+- Appends a new Document History row (Sarah Suda, today's date, sections updated)
+- **Protected sections — never overwritten:** Solution Overview, Involved Interfaces, Sequence Diagrams, Monitoring and Alerting Guidelines
+- Shows a preview and asks for confirmation before writing
+
+---
+
+## Skills (Slash Commands)
+
+### /ba-workflow
+**File:** `.claude\commands\ba-workflow.md`  
+**Description:** Main orchestrator. Presents a menu and chains the correct agents in order.
+
+| Option | Pipeline |
+|---|---|
+| 1 — Spec only | functional-spec-generator |
+| 2 — Stories only | ba-story-generator |
+| 3 — Full end-to-end | spec → stories → validate → amend → publish |
+| 4 — Validate and publish | validate → amend → publish |
+
+### /ba-amend
+**File:** `.claude\commands\ba-amend.md`  
+**Description:** Reads `output\validation\validation-report.md` and presents each flag one at a time. User chooses: Accept fix / Edit manually / Skip. Applies changes directly to the relevant file.
+
+---
+
+## MCP Server
+
+**Location:** `C:\Users\Sarah_Suda\MSC- Mule BA Agent\mcp\`  
+**Start command:** `uv run msc-mcp-server` (run from the `mcp\` folder)  
+**Endpoint:** `http://localhost:8080/mcp`  
+**Credentials:** `mcp\.env` (see `docs\SETUP.md`)
+
+The MCP server must be running for jira-publisher and confluence-publisher to function.
+
+---
+
+## Output Folder Structure
+
+```
+output/
+├── specs/
+│   └── functional_spec_[feature_name].html   ← generated functional specification
+├── stories/
+│   └── [feature_name].md                     ← Jira-ready CRs and User Stories
+└── validation/
+    └── validation-report.md                  ← flags, severities, and suggested fixes
+```
 
 ---
 
@@ -89,9 +205,8 @@ Stored in: `knowledge\templates\`
 
 | Template | File | Use For |
 |---|---|---|
-| Functional Specification | `functional_specification_template.html` | Full 9-section spec document |
 | User Story | `user_story_template.html` | New interface stories |
-| Change Request | `change_request_template.html` | Changes to existing interfaces |
+| Mulesoft Requirements | `Mulesoft+Requirements+Template.doc` | Source template for functional spec structure |
 
 ---
 

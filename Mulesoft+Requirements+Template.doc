@@ -1,0 +1,574 @@
+Date: Fri, 15 May 2026 10:25:00 +0000 (UTC)
+Message-ID: <1517551447.49.1778840700795@34fe7b7115e7>
+Subject: Exported From Confluence
+MIME-Version: 1.0
+Content-Type: multipart/related; 
+	boundary="----=_Part_48_1699849162.1778840700794"
+
+------=_Part_48_1699849162.1778840700794
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+Content-Location: file:///C:/exported.html
+
+<html xmlns:o=3D'urn:schemas-microsoft-com:office:office'
+      xmlns:w=3D'urn:schemas-microsoft-com:office:word'
+      xmlns:v=3D'urn:schemas-microsoft-com:vml'
+      xmlns=3D'urn:w3-org-ns:HTML'>
+<head>
+    <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8=
+">
+    <title>Mulesoft Requirements Template</title>
+    <!--[if gte mso 9]>
+    <xml>
+        <o:OfficeDocumentSettings>
+            <o:TargetScreenSize>1024x640</o:TargetScreenSize>
+            <o:PixelsPerInch>72</o:PixelsPerInch>
+            <o:AllowPNG/>
+        </o:OfficeDocumentSettings>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>90</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml>
+    <![endif]-->
+    <style>
+                <!--
+        @page Section1 {
+            size: 8.5in 11.0in;
+            margin: 1.0in;
+            mso-header-margin: .5in;
+            mso-footer-margin: .5in;
+            mso-paper-source: 0;
+        }
+
+        table {
+            border: solid 1px;
+            border-collapse: collapse;
+        }
+
+        table td, table th {
+            border: solid 1px;
+            padding: 5px;
+        }
+
+        td {
+            page-break-inside: avoid;
+        }
+
+        tr {
+            page-break-after: avoid;
+        }
+
+        div.Section1 {
+            page: Section1;
+        }
+
+        /* Confluence print stylesheet. Common to all themes for print medi=
+a */
+/* Full of !important until we improve batching for print CSS */
+
+@media print {
+    #main {
+        padding-bottom: 1em !important; /* The default padding of 6em is to=
+o much for printouts */
+    }
+
+    body {
+        font: var(--ds-font-body-small, Arial, Helvetica, FreeSans, sans-se=
+rif);
+    }
+
+    body, #full-height-container, #main, #page, #content, .has-personal-sid=
+ebar #content {
+        background: var(--ds-surface, #fff) !important;
+        color: var(--ds-text, #000) !important;
+        border: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    a, a:link, a:visited, a:focus, a:hover, a:active {
+        color: var(--ds-text, #000);
+    }
+
+    #content h1,
+    #content h2,
+    #content h3,
+    #content h4,
+    #content h5,
+    #content h6 {
+        page-break-after: avoid;
+    }
+
+    pre {
+        font: var(--ds-font-code, Monaco, "Courier New", monospace);
+    }
+
+    #header,
+    .aui-header-inner,
+    #navigation,
+    #sidebar,
+    .sidebar,
+    #personal-info-sidebar,
+    .ia-fixed-sidebar,
+    .page-actions,
+    .navmenu,
+    .ajs-menu-bar,
+    .noprint,
+    .inline-control-link,
+    .inline-control-link a,
+    a.show-labels-editor,
+    .global-comment-actions,
+    .comment-actions,
+    .quick-comment-container,
+    #addcomment {
+        display: none !important;
+    }
+
+    /* CONF-28544 cannot print multiple pages in IE */
+    #splitter-content {
+        position: relative !important;
+    }
+
+    .comment .date::before {
+        content: none !important; /* remove middot for print view */
+    }
+
+    h1.pagetitle img {
+        height: auto;
+        width: auto;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    #footer {
+        position: relative !important; /* CONF-17506 Place the footer at en=
+d of the content */
+        margin: 0;
+        padding: 0;
+        background: none;
+        clear: both;
+    }
+
+    #poweredby {
+        border-top: none;
+        background: none;
+    }
+
+    #poweredby li.print-only {
+        display: list-item;
+        font-style: italic;
+    }
+
+    #poweredby li.noprint {
+        display: none;
+    }
+
+    /* no width controls in print */
+    .wiki-content .table-wrap,
+    .wiki-content p,
+    .panel .codeContent,
+    .panel .codeContent pre,
+    .image-wrap {
+        overflow: visible !important;
+    }
+
+    /* TODO - should this work? */
+    #children-section,
+    #comments-section .comment,
+    #comments-section .comment .comment-body,
+    #comments-section .comment .comment-content,
+    #comments-section .comment p {
+        page-break-inside: avoid;
+    }
+
+    #page-children a {
+        text-decoration: none;
+    }
+
+    /**
+     hide twixies
+
+     the specificity here is a hack because print styles
+     are getting loaded before the base styles. */
+    #comments-section.pageSection .section-header,
+    #comments-section.pageSection .section-title,
+    #children-section.pageSection .section-header,
+    #children-section.pageSection .section-title,
+    .children-show-hide {
+        padding-left: 0;
+        margin-left: 0;
+    }
+
+    .children-show-hide.icon {
+        display: none;
+    }
+
+    /* personal sidebar */
+    .has-personal-sidebar #content {
+        margin-right: 0px;
+    }
+
+    .has-personal-sidebar #content .pageSection {
+        margin-right: 0px;
+    }
+
+    .no-print, .no-print * {
+        display: none !important;
+    }
+}
+-->
+    </style>
+</head>
+<body>
+    <h1>Mulesoft Requirements Template</h1>
+    <div class=3D"Section1">
+        <p local-id=3D"f5a0d965bc7e"></p>
+<style type=3D"text/css">/*<![CDATA[*/
+div.rbtoc1778840700784 {padding: 0px;}
+div.rbtoc1778840700784 ul {list-style: none;margin-left: 0px;}
+div.rbtoc1778840700784 li {margin-left: 0px;padding-left: 0px;}
+
+/*]]>*/</style>
+<div class=3D"toc-macro rbtoc1778840700784">
+<ul class=3D"toc-indentation">
+<li><a href=3D"#MulesoftRequirementsTemplate-DocumentHistory">Document Hist=
+ory</a>
+<ul class=3D"toc-indentation">
+<li><a href=3D"#MulesoftRequirementsTemplate-Referencedocumentation:">Refer=
+ence documentation:</a></li>
+</ul></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-FeatureSummary">Feature Summar=
+y</a>
+<ul class=3D"toc-indentation">
+<li><a href=3D"#MulesoftRequirementsTemplate-BusinessRequirements">Business=
+ Requirements</a></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-UseCases">Use Cases</a></li>
+</ul></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-SolutionOverview">Solution Ove=
+rview</a>
+<ul class=3D"toc-indentation">
+<li><a href=3D"#MulesoftRequirementsTemplate-InvolvedInterfaces">Involved I=
+nterfaces</a></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-SequenceDiagrams">Sequence Dia=
+grams</a></li>
+</ul></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-Non-FunctionalRequirements">No=
+n-Functional Requirements</a></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-Monitoringandalertingguideline=
+s">Monitoring and alerting guidelines</a></li>
+<li><a href=3D"#MulesoftRequirementsTemplate-TestScenarios&amp;AcceptanceCr=
+iteria">Test Scenarios &amp; Acceptance Criteria</a></li>
+</ul>
+</div>
+<h1 local-id=3D"9a88324123e4" id=3D"MulesoftRequirementsTemplate-DocumentHi=
+story">Document History</h1>
+<div class=3D"table-wrap">
+<table data-table-width=3D"760" data-layout=3D"default" data-local-id=3D"48=
+365c80-2603-48ab-8224-959ef2b91843" class=3D"confluenceTable">
+<tbody>
+<tr data-local-id=3D"e95b318d-ba0d-4275-9428-c7c2d737ad39">
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"561ea8ef-c5e4-4ba9-a=
+e37-c495a39ca70d" class=3D"confluenceTh">
+<p local-id=3D"a9fb6f911438">VERSION</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"250fa073-f75a-4c45-a=
+eba-f25c1cec8507" class=3D"confluenceTh">
+<p local-id=3D"5d0d77cd2c39">AUTHOR(S)</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"aad484f8-f3ea-480e-b=
+223-6f6674e1278b" class=3D"confluenceTh">
+<p local-id=3D"90d489bbf4d1">DATE</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"13ce77dd-3b06-40cb-9=
+920-4a4326c8df1f" class=3D"confluenceTh">
+<p local-id=3D"1d7507afc8a1">REMARKS</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"774319ca-c302-4765-8=
+316-81e439410467" class=3D"confluenceTh">
+<p local-id=3D"44b26395a29b">STATUS</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"de7f1629-8a75-4109-a=
+fff-a752f23c2a06" class=3D"confluenceTh">
+<p local-id=3D"de1cc69c06df">TICKETS</p></th>
+</tr>
+<tr data-local-id=3D"a8d4ab7b-4d8e-4eaf-8b30-0684d7521039">
+<td data-local-id=3D"baf70f15-b4de-4cf2-8181-8a0ef0b0f9dd" class=3D"conflue=
+nceTd">
+<p local-id=3D"d53469991fc2">1</p></td>
+<td data-local-id=3D"9799f092-2a61-4149-a4c7-59c333096465" class=3D"conflue=
+nceTd">
+<p local-id=3D"f2cc35b77913"></p></td>
+<td data-local-id=3D"304e9ae0-f0c7-4191-80de-c8c694f1ca64" class=3D"conflue=
+nceTd">
+<p local-id=3D"3574797b79fa"></p></td>
+<td data-local-id=3D"19077238-292d-497f-89b3-d2edeea949d8" class=3D"conflue=
+nceTd">
+<p local-id=3D"816b3bd85e09"></p></td>
+<td data-local-id=3D"fe06d3a4-bd98-46e5-a8a5-5448dc201a64" class=3D"conflue=
+nceTd">
+<p local-id=3D"2fd6c865dee8"></p></td>
+<td data-local-id=3D"b5c8e396-313e-4a15-98bd-2fbaf863f8d7" class=3D"conflue=
+nceTd">
+<p local-id=3D"ab22fb5fdd33"></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 local-id=3D"3066823dbbec" id=3D"MulesoftRequirementsTemplate-Referenced=
+ocumentation:"><strong>Reference documentation: </strong></h2>
+<div class=3D"table-wrap">
+<table data-table-width=3D"760" data-layout=3D"default" data-local-id=3D"e5=
+291987-274c-46bf-b9b5-98df9c6daab3" class=3D"confluenceTable">
+<tbody>
+<tr data-local-id=3D"261a5e13-5a28-4c12-8ef5-569fd485bb9b">
+<th data-local-id=3D"a6465383-225c-420f-a576-3aae752c8005" class=3D"conflue=
+nceTh">
+<p local-id=3D"290c9d85187e"><strong>Document </strong></p></th>
+<th data-local-id=3D"94969cc5-a9e1-4133-a653-abc06b670200" class=3D"conflue=
+nceTh">
+<p local-id=3D"21d82cd17cec"><strong>Link </strong></p></th>
+</tr>
+<tr data-local-id=3D"d509b895-f6b3-452b-9eb5-0f61ed2000fc">
+<td data-local-id=3D"bad77107-4406-4987-ab97-a9794f92f099" class=3D"conflue=
+nceTd">
+<p local-id=3D"ddba39eb8ef9"></p></td>
+<td data-local-id=3D"0ec2dba9-79bb-4e91-9cd1-12a6167bd20a" class=3D"conflue=
+nceTd">
+<p local-id=3D"58fbedc9c97b"></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h1 local-id=3D"ffb9e065c156" id=3D"MulesoftRequirementsTemplate-FeatureSum=
+mary">Feature Summary</h1>
+<p local-id=3D"9dfa1ce81452"><em>[feature summary text] </em></p>
+<h2 local-id=3D"97ac4f2a6b25" id=3D"MulesoftRequirementsTemplate-BusinessRe=
+quirements">Business Requirements</h2>
+<div class=3D"table-wrap">
+<table data-table-width=3D"1058" data-layout=3D"center" data-local-id=3D"50=
+97b224-c7ab-4b31-ae07-74696dbb167f" class=3D"confluenceTable">
+<colgroup>
+<col style=3D"width: 1057.0px;">
+</colgroup>
+<tbody>
+<tr data-local-id=3D"8050782a-1f40-4dc1-a0db-053de289fb3a">
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"ed5ca9af-9503-4d4a-8=
+2b1-2af0e6dd2e58" class=3D"confluenceTh">
+<p local-id=3D"cd0144f95e15"><strong>Requirements Description</strong></p><=
+/th>
+</tr>
+<tr data-local-id=3D"aec5c6f0-4ae8-4669-b6a4-f63fd842840c">
+<td data-local-id=3D"e4f67905-64e1-41ec-8912-b80292c6474f" class=3D"conflue=
+nceTd">
+<ol start=3D"1" local-id=3D"0645fe51-7543-427d-915e-18402affcd92">
+<li local-id=3D"748fbacc-d162-43c1-9130-d3de8d29ebb0">
+<p local-id=3D"f1fa368262f3"><strong>As a</strong> <br><strong>I want to</s=
+trong> <br><strong>So that I</strong></p>
+<p local-id=3D"8b087b458e0e">[add images where provided]</p></li>
+</ol></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 local-id=3D"926028d4796c" id=3D"MulesoftRequirementsTemplate-UseCases">=
+Use Cases</h2>
+<div class=3D"table-wrap">
+<table data-table-width=3D"1058" data-layout=3D"center" data-local-id=3D"3a=
+b8a393-2fb6-43cd-92d8-0cd75eed195a" class=3D"confluenceTable">
+<colgroup>
+<col style=3D"width: 99.0px;">
+<col style=3D"width: 210.0px;">
+<col style=3D"width: 187.0px;">
+<col style=3D"width: 187.0px;">
+<col style=3D"width: 187.0px;">
+<col style=3D"width: 187.0px;">
+</colgroup>
+<tbody>
+<tr data-local-id=3D"cdb3e190-6996-472e-97a0-dc6fac5fa835">
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"6e31a26f-d4f6-4a33-b=
+189-b0c11212d027" class=3D"confluenceTh">
+<p local-id=3D"7f7bcc6c453a"><strong>UC#. </strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"b165a0f4e01a" class=
+=3D"confluenceTh">
+<p local-id=3D"00c52d4d25ec"><strong>PreCondition&nbsp;</strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"af927411-f332-4bae-8=
+29e-999d2942790c" class=3D"confluenceTh">
+<p local-id=3D"331bcf1f613d"><strong>Actor/s</strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"6a517167-56ab-4334-9=
+b62-6416ed328c64" class=3D"confluenceTh">
+<p local-id=3D"e6d11e1e39d3"><strong>Use Case</strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"663c7c16-37a9-4d5b-a=
+0eb-89bfd5b79b45" class=3D"confluenceTh">
+<p local-id=3D"f47a71f8a348"><strong>Functionality Expected</strong></p></t=
+h>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"db5d7193-dcb8-4bad-b=
+c2b-470c06d472be" class=3D"confluenceTh">
+<p local-id=3D"3ba8f42ed757"><strong>Open Questions</strong></p></th>
+</tr>
+<tr data-local-id=3D"143cad29-4a97-435a-a756-309ce7607e69">
+<td data-local-id=3D"b12c1255-7580-4cd1-9572-b350265c1098" class=3D"conflue=
+nceTd">
+<p local-id=3D"612f7783af53"></p></td>
+<td data-local-id=3D"918bacfe817e" class=3D"confluenceTd">
+<p local-id=3D"324d6a90fdd8"></p></td>
+<td data-local-id=3D"940f5435-c655-4971-b4b2-bd3c7dcd9896" class=3D"conflue=
+nceTd">
+<p local-id=3D"8c6928818b97"></p></td>
+<td data-local-id=3D"e46256d4-c079-4afd-8a22-13a7d6e94b33" class=3D"conflue=
+nceTd">
+<p local-id=3D"f2c508f596bd"></p></td>
+<td data-local-id=3D"5a5eda6e-13b1-498c-8f39-4d20b4e7f35a" class=3D"conflue=
+nceTd">
+<p local-id=3D"46f9073aa38c"></p></td>
+<td data-local-id=3D"6d12e938-bc34-4dc6-918a-ea490b50f194" class=3D"conflue=
+nceTd">
+<p local-id=3D"897e01a8c475"></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p local-id=3D"0a56213a92d1"></p>
+<p local-id=3D"4761a345d966"></p>
+<h1 local-id=3D"5f80356fd804" id=3D"MulesoftRequirementsTemplate-SolutionOv=
+erview">Solution Overview</h1>
+<p local-id=3D"7ae610ff5bb1"><em>[solution overview text] </em></p>
+<h2 local-id=3D"6816641cfa3f" id=3D"MulesoftRequirementsTemplate-InvolvedIn=
+terfaces">Involved Interfaces</h2>
+<div class=3D"table-wrap">
+<table data-table-width=3D"1082" data-layout=3D"center" data-local-id=3D"fd=
+f8ff98-6c13-4222-bcec-af690080d469" class=3D"confluenceTable">
+<tbody>
+<tr data-local-id=3D"f9eb00a7-992c-4d6f-ae91-c3a837c38fc0">
+<th data-local-id=3D"473f120d-0a43-4859-9516-ca9b7a06e66b" class=3D"conflue=
+nceTh">
+<p local-id=3D"acca01c5faa8"><strong>Interface</strong></p></th>
+<th data-local-id=3D"db408686-44d5-4504-8d44-6a90289d9a48" class=3D"conflue=
+nceTh">
+<p local-id=3D"4e18a029f4ca"><strong>High Level Impacts</strong></p></th>
+<th data-local-id=3D"cfff4089-8ff6-4fef-a0b6-d11968a2d346" class=3D"conflue=
+nceTh">
+<p local-id=3D"3c78a73c1ccc"><strong>Low Level Impacts</strong></p></th>
+<th data-local-id=3D"88643579-0f35-4980-a92a-9a05a2793d27" class=3D"conflue=
+nceTh">
+<p local-id=3D"b77fc024cd15"><strong>Integration High Level Architecture</s=
+trong></p></th>
+</tr>
+<tr data-local-id=3D"6810d2a2-0f10-4829-8cbc-20d37fbb7cf8">
+<td data-local-id=3D"545c04f9-3fac-4b96-b7a7-1a4708a31def" class=3D"conflue=
+nceTd">
+<p local-id=3D"97b14aa06a10"></p></td>
+<td data-local-id=3D"e8bc7b7d-6894-4595-834a-26c44f9a42df" class=3D"conflue=
+nceTd">
+<p local-id=3D"755a1621a426"></p></td>
+<td data-local-id=3D"2138ed46-e320-4e11-b8e1-fe7ffd92d4db" class=3D"conflue=
+nceTd">
+<p local-id=3D"d758ce639801"></p></td>
+<td data-local-id=3D"7bb9038b-008f-4493-93b0-227ebfb87fb2" class=3D"conflue=
+nceTd">
+<p local-id=3D"0c26b3567a64"></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h2 local-id=3D"8e53ad32936b" id=3D"MulesoftRequirementsTemplate-SequenceDi=
+agrams">Sequence Diagrams</h2>
+<p local-id=3D"fa56910e2a61"></p>
+<p local-id=3D"ba6bb9b080d1"></p>
+<h1 local-id=3D"633f71658f8f" id=3D"MulesoftRequirementsTemplate-Non-Functi=
+onalRequirements">Non-Functional Requirements</h1>
+<div class=3D"table-wrap">
+<table data-table-width=3D"1176" data-layout=3D"center" data-local-id=3D"67=
+30ed84-e15f-4e56-82fb-fe394fa448ff" class=3D"confluenceTable">
+<tbody>
+<tr data-local-id=3D"3dcd422a-d00c-4b44-8993-5327ff2f1efc">
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"e76c9beb-49b2-4c04-8=
+d53-ad143745af14" class=3D"confluenceTh">
+<p local-id=3D"276c8aea0e6a">Requirement ID&nbsp;</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"cf9ff7ce-ed68-41ae-a=
+e1a-1612547ff10d" class=3D"confluenceTh">
+<p local-id=3D"c1105ac5c696">Interface</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"c1e66ae7-8d9c-4630-9=
+ab5-89719d1b807a" class=3D"confluenceTh">
+<p local-id=3D"89b96c324069">Requirement Description</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"85e34e8d-568c-473a-b=
+b5b-23c5dd9d4399" class=3D"confluenceTh">
+<p local-id=3D"f47c2682c628">Category&nbsp;</p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"d7f587a1-fccc-40a5-b=
+c44-f8732dc41697" class=3D"confluenceTh">
+<p local-id=3D"4fad24dd84ef">Priority</p></th>
+</tr>
+<tr data-local-id=3D"53043dce-d6c6-4485-a67c-466a9365ecb8">
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"039a647b-6521-4c8d-9=
+a20-c95260f95642" class=3D"confluenceTd">
+<p local-id=3D"04035e6392cf">&nbsp;</p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"fb81ac78-5291-4287-a=
+351-0b2cfbd8409d" class=3D"confluenceTd">
+<p local-id=3D"a60812837107">&nbsp;</p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"a0c66a3a-e2b4-43bd-9=
+44e-80f3bff0118f" class=3D"confluenceTd">
+<p local-id=3D"9b62330b0929">&nbsp;</p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"446b1809-424a-4580-b=
+845-a5845cb941c5" class=3D"confluenceTd">
+<p local-id=3D"560eee1a54ca">&nbsp;</p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"bcef45d3-46c3-46a9-a=
+e1a-b3461539ea2d" class=3D"confluenceTd">
+<p local-id=3D"d83ec9712731">&nbsp;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p local-id=3D"d924159d14e5"></p>
+<h1 local-id=3D"3d389f7b9271" id=3D"MulesoftRequirementsTemplate-Monitoring=
+andalertingguidelines">Monitoring and alerting guidelines</h1>
+<p local-id=3D"0f14f7ef025d"><em>[monitoring and alerting guidelines text]<=
+/em></p>
+<h1 local-id=3D"96bebb31ab7f" id=3D"MulesoftRequirementsTemplate-TestScenar=
+ios&amp;AcceptanceCriteria">Test Scenarios &amp; Acceptance Criteria</h1>
+<div class=3D"table-wrap">
+<table data-table-width=3D"1158" data-layout=3D"center" data-local-id=3D"05=
+8ff574-d0fe-453e-8c22-6565762af9b7" class=3D"confluenceTable">
+<colgroup>
+<col style=3D"width: 302.0px;">
+<col style=3D"width: 285.0px;">
+<col style=3D"width: 230.0px;">
+<col style=3D"width: 340.0px;">
+</colgroup>
+<tbody>
+<tr data-local-id=3D"58bfc879-5afb-45b6-89d4-f8d964b14aae">
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"2ed26a7e-d086-4481-b=
+d5b-3d49106248bf" class=3D"confluenceTh">
+<p local-id=3D"857879c4d717"><strong>Use Case&nbsp;</strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"32a5d64e-0138-4a44-9=
+4fa-9208ac8639d2" class=3D"confluenceTh">
+<p local-id=3D"8445ffe298c0"><strong>Test Cases&nbsp;</strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"0db01ca86911" class=
+=3D"confluenceTh">
+<p local-id=3D"7bf6c17b5232"><strong>Acceptance Criteria </strong></p></th>
+<th data-highlight-colour=3D"#f0f1f2" data-local-id=3D"b8381de8-00b7-4ecf-b=
+7dd-3602f1b5c99e" class=3D"confluenceTh">
+<p local-id=3D"1ba117df5216"><strong>Test Data&nbsp;</strong></p></th>
+</tr>
+<tr data-local-id=3D"4d09a343-c0da-4941-a0c7-3b41b4d63633">
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"e73eeb3d-1d6f-4053-a=
+3e4-873ea7f4ca83" class=3D"confluenceTd">
+<p local-id=3D"049e55adff36"></p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"3ea7d7bf-97c1-4500-a=
+552-737c51f5b587" class=3D"confluenceTd">
+<p local-id=3D"bcef6df8c4eb"></p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"597042e11432" class=
+=3D"confluenceTd">
+<p local-id=3D"065dbdd4e696"></p></td>
+<td data-highlight-colour=3D"#ffffff" data-local-id=3D"c2838da8-529e-496d-8=
+1cc-f36a2d806167" class=3D"confluenceTd">
+<p local-id=3D"a80b6cb71604"></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+    </div>
+</body>
+</html>
+------=_Part_48_1699849162.1778840700794--

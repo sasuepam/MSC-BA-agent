@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Bash(*)"
+    ]
+  },
+  "mcpServers": {
+    "msc-ba": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}

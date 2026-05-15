@@ -1,5 +1,5 @@
 [project]
-name = "msc-ba-mcp-server"
+name = "msc-mcp-server"
 version = "0.1.0"
 description = "MCP server for MSC Cruises BA team — extends Codemie with Jira and Confluence tools for DTTP BA workflows"
 readme = "README_MCP.md"
@@ -25,7 +25,7 @@ dev = [
 msc-mcp-server = "msc_mcp_server.server:main"
 
 [build-system]
-requires = ["uv_build>=0.9.17,<0.10.0"]
+requires = ["uv_build>=0.9.17"]
 build-backend = "uv_build"
 
 [tool.ruff]

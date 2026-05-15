@@ -1,135 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Functional Specification — [Feature Name]</title>
+  <meta charset="UTF-8">
+  <title>Functional Specification – [FEATURE NAME]</title>
 </head>
 <body>
 
-  <h1>Functional Specification &mdash; [Feature Name]</h1>
-  <p>By [Author Name]</p>
+<h1>Functional Specification – [FEATURE NAME]</h1>
 
-  <h2>1. Document Header</h2>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>Field</th><th>Value</th></tr>
-    <tr><td>Feature Name</td><td>[Feature Name]</td></tr>
-    <tr><td>Author</td><td>[Author Name]</td></tr>
-    <tr><td>Date</td><td>[DD/MM/YYYY]</td></tr>
-    <tr><td>Status</td><td>[Draft / In Review / Approved]</td></tr>
-    <tr><td>Version</td><td>1.0</td></tr>
-  </table>
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
 
-  <h2>2. Document History</h2>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>Version</th><th>Author(s)</th><th>Date</th><th>Remarks</th><th>Status</th><th>Tickets</th></tr>
-    <tr><td>1.0</td><td>[Author]</td><td>[DD/MM/YYYY]</td><td>Initial draft</td><td>Draft</td><td>[JIRA-XXX]</td></tr>
-  </table>
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
 
-  <h2>3. Feature Summary</h2>
-  <p>[Brief description of the feature and its business purpose.]</p>
 
-  <h3>3.1 Reference Documentation</h3>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>Document</th><th>Location / Link</th><th>Notes</th></tr>
-    <tr><td>[Doc Name]</td><td>[URL or path]</td><td>[Notes]</td></tr>
-  </table>
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>[AUTHOR]</td>
+    <td>[DD/MMM/YYYY]</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td>[JIRA TICKET(S) or TO BE CONFIRMED]</td>
+  </tr>
+</table>
 
-  <h2>4. Solution Scope</h2>
 
-  <h3>4.1 Overview</h3>
-  <p>[High-level description of the solution being delivered.]</p>
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>[Document name]</td>
+    <td>[URL or TO BE CONFIRMED]</td>
+  </tr>
+</table>
 
-  <h3>4.2 Key User Flow Steps</h3>
-  <ol>
-    <li>[Step 1]</li>
-    <li>[Step 2]</li>
-    <li>[Step 3]</li>
-  </ol>
 
-  <h3>4.3 Business Rules</h3>
-  <ul>
-    <li>[Business rule 1]</li>
-    <li>[Business rule 2]</li>
-    <li>[Business rule 3]</li>
-  </ul>
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>[One to three paragraphs describing the overall solution: what it does, why it is needed, and who benefits. Mark gaps as [TO BE CONFIRMED].]</p>
 
-  <h3>4.4 System Integrations</h3>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>Interface ID</th><th>System</th><th>Direction</th><th>Description</th></tr>
-    <tr><td>[INT-XXX]</td><td>[System Name]</td><td>[Inbound / Outbound]</td><td>[Description]</td></tr>
-  </table>
 
-  <h3>4.5 Post-[Feature]-Behaviour</h3>
-  <p>[Describe the expected system state and behaviour after the feature is executed.]</p>
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a [actor] I want to [action] so that [benefit]</td>
+    <td>[Additional detail or business rule. Mark gaps as TO BE CONFIRMED.]</td>
+  </tr>
+</table>
 
-  <h2>5. Functional Requirements</h2>
 
-  <h3>5.1 Requirements Description</h3>
-  <blockquote>
-    As a <strong>[user/system]</strong>, I want <strong>[goal]</strong> so that <strong>[reason/benefit]</strong>.
-  </blockquote>
-  <p>[Supporting narrative if needed.]</p>
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>[System state or data that must exist before this use case runs]</td>
+    <td>[User role(s) or system(s) involved]</td>
+    <td>[Name or short description of the use case]</td>
+    <td>[Step-by-step description of expected behaviour. Name the MuleSoft API called, e.g. "calls INT118 Web User Deactivation API".]</td>
+    <td>[Unresolved question, or — if none]</td>
+  </tr>
+</table>
 
-  <h3>5.2 Use Case Table</h3>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr>
-      <th>Pre-Condition</th>
-      <th>Actor(s)</th>
-      <th>Use Case</th>
-      <th>Functionality Expected</th>
-      <th>Solution Proposed</th>
-      <th>Impact on MS</th>
-      <th>Open Questions</th>
-    </tr>
-    <tr>
-      <td>[Pre-condition]</td>
-      <td>[Actor]</td>
-      <td>UC-01 [Name]</td>
-      <td>[What the system should do]</td>
-      <td>[How it will be achieved]</td>
-      <td>[MuleSoft impact]</td>
-      <td>[TO BE CONFIRMED]</td>
-    </tr>
-  </table>
 
-  <h2>6. High-Level Impacts</h2>
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
 
-  <h3>6.1 [Interface ID] &mdash; [Interface Name]</h3>
-  <ul>
-    <li><strong>Purpose:</strong> [What this interface does]</li>
-    <li><strong>Enhancements:</strong> [What is changing or being added]</li>
-    <li><strong>Process:</strong> [Step-by-step flow changes]</li>
-    <li><strong>Key Considerations:</strong> [Any risks, dependencies, or constraints]</li>
-  </ul>
-  <p><em>Add one subsection per impacted interface.</em></p>
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
 
-  <h2>7. In Scope</h2>
 
-  <h3>7.1 [System Name]</h3>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>JIRA Ticket</th><th>Description</th></tr>
-    <tr><td>[JIRA-XXX]</td><td>[Ticket description]</td></tr>
-  </table>
-  <p><em>Add one subsection per system in scope.</em></p>
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
 
-  <h2>8. Test Scenarios</h2>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>Use Case</th><th>Test Cases</th><th>Test Data</th></tr>
-    <tr><td>UC-01 [Name]</td><td>[Test case description]</td><td>[Data required]</td></tr>
-  </table>
 
-  <h2>9. Non-Functional Requirements</h2>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>Requirement ID</th><th>Interface</th><th>Requirement Description</th><th>Category</th><th>Priority</th></tr>
-    <tr><td>NFR-01</td><td>[Interface]</td><td>[Description]</td><td>[Performance / Security / Availability]</td><td>[High / Medium / Low]</td></tr>
-  </table>
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
 
-  <h2>Gaps &amp; Open Items</h2>
-  <p><em>Mark unknown or unconfirmed content as [TO BE CONFIRMED]. Mark inferred content as *(inferred)*.</em></p>
-  <table border="1" cellpadding="5" cellspacing="0">
-    <tr><th>#</th><th>Gap / Open Item</th><th>Owner</th><th>Due Date</th></tr>
-    <tr><td>1</td><td>[Description]</td><td>[Name]</td><td>[DD/MM/YYYY]</td></tr>
-  </table>
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — SLA, security, throughput,
+            error handling, retry policy, availability.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>[API name e.g. INT118]</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>[Performance | Security | Availability | Scalability | Compliance | Auditability]</td>
+    <td>[High | Medium | Low]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>[Given … When … Then … description of the API-level test scenario, including HTTP method, endpoint, and payload where known]</td>
+    <td>[The condition that must be true for the test to pass, e.g. HTTP 200 returned with expected response body]</td>
+    <td>[Sample request values, system state, or TO BE CONFIRMED]</td>
+  </tr>
+</table>
 
 </body>
 </html>
