@@ -1,0 +1,13 @@
+# Credentials
+mcp/.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Generated output (local working files — not versioned)
+output/
+
+# Office temp files
+~$*
