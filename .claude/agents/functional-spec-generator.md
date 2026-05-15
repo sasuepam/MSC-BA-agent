@@ -33,6 +33,11 @@ Always distinguish between what the MuleSoft team owns (the API contract and imp
 - Non-functional requirements must be numbered NFR-001, NFR-002, … and be written at the API level — include Interface (the API name), Category, and Priority.
 - Test scenarios must map back to a Use Case reference and be written as API-level tests (HTTP method, endpoint, payload, expected HTTP status, response body). Each row must include Acceptance Criteria and Test Data.
 - **Test scenario scope:** Always test the experience API (the API the requestor calls). Only include downstream propagation test cases for interfaces where a change has been made. Do not include connectivity tests — assume all downstream connections are in place.
+- **Test scenario coverage:** For every Use Case, you **must** produce test cases covering all three categories:
+  - **Happy path** — the primary success flow with valid input, expected HTTP 2xx and correct response body
+  - **Alternative paths** — valid variations that follow a different but legitimate flow (e.g. optional fields omitted, different booking type, child passenger vs adult, partial update)
+  - **Error scenarios** — invalid or missing input, business rule violations, boundary conditions, and any named error codes from the source materials (e.g. BKG_REG_1). Each error scenario must state the expected HTTP status code and error response
+  If a category cannot be determined from the source, mark it `[TO BE CONFIRMED]` and note it as a gap — do not silently omit it.
 - **Test Data column:** Do not write actual data values or `[TO BE CONFIRMED]`. Instead, describe what test data needs to be prepared or requested — e.g. "Booking request with a valid phone number and country code", "Booking request for a cruise with flight (INT007 variant)", "Request payload that triggers error BKG_REG_1". This guides the BA or tester on what to set up before executing the test.
 - All dates use DD/MMM/YYYY format.
 - The output file must be plain HTML — **no `<style>` blocks, no inline `style=` attributes, no CSS classes, no external CSS or JS dependencies**. Use only `border="1" cellpadding="5" cellspacing="0"` on tables. Priority values (High / Medium / Low) are written as plain text, not styled spans.
@@ -265,8 +270,8 @@ Save a single HTML file using the template below. Fill every section from the so
   </tr>
   <tr>
     <td>UC-001</td>
-    <td>[Given … When … Then … description of the API-level test scenario, including HTTP method, endpoint, and payload where known]</td>
-    <td>[The condition that must be true for the test to pass, e.g. HTTP 200 returned with expected response body]</td>
+    <td>[Given … When … Then … Label each test case as HAPPY PATH / ALT PATH / ERROR. Include HTTP method, endpoint, and key payload details where known. Every Use Case must have at least one of each category.]</td>
+    <td>[The condition that must be true for the test to pass, e.g. HTTP 200 returned with expected response body, or HTTP 400 with named error code]</td>
     <td>[Description of what test data needs to be prepared or requested, e.g. "Booking request with valid phone number and country code", "Request payload missing mobilePhone for first passenger", "Request that triggers error BKG_REG_1". Do not write actual field values here.]</td>
   </tr>
 </table>
