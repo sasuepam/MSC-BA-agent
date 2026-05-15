@@ -33,7 +33,7 @@ Always distinguish between what the MuleSoft team owns (the API contract and imp
 - Non-functional requirements must be numbered NFR-001, NFR-002, … and be written at the API level — include Interface (the API name), Category, and Priority.
 - Test scenarios must map back to a Use Case reference and be written as API-level tests (HTTP method, endpoint, payload, expected HTTP status, response body). Each row must include Acceptance Criteria and Test Data (or `[TO BE CONFIRMED]`).
 - All dates use DD/MMM/YYYY format.
-- The output file must be valid, self-contained HTML — no external CSS or JS dependencies.
+- The output file must be plain HTML — **no `<style>` blocks, no inline `style=` attributes, no CSS classes, no external CSS or JS dependencies**. Use only `border="1" cellpadding="5" cellspacing="0"` on tables. Priority values (High / Medium / Low) are written as plain text, not styled spans.
 
 ## Workflow
 
@@ -54,33 +54,38 @@ Save a single HTML file using the template below. Fill every section from the so
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Functional Specification – [FEATURE NAME]</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #222; max-width: 1100px; margin: 40px auto; padding: 0 28px; }
-    h1 { font-size: 22px; border-bottom: 3px solid #003087; padding-bottom: 8px; color: #003087; margin-top: 40px; }
-    h2 { font-size: 15px; background: #003087; color: #fff; padding: 7px 12px; margin-top: 36px; }
-    p  { line-height: 1.6; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th { background: #003087; color: #fff; padding: 7px 10px; text-align: left; font-size: 12px; border: 1px solid #003087; }
-    td { border: 1px solid #bbb; padding: 7px 10px; vertical-align: top; font-size: 12px; }
-    tr:nth-child(even) td { background: #f5f7fa; }
-    .tbc { color: #c00; font-weight: bold; }
-    .pri-high   { background: #c00;   color: #fff; border-radius: 3px; padding: 1px 7px; font-size: 11px; }
-    .pri-medium { background: #e67e00; color: #fff; border-radius: 3px; padding: 1px 7px; font-size: 11px; }
-    .pri-low    { background: #555;   color: #fff; border-radius: 3px; padding: 1px 7px; font-size: 11px; }
-    footer { margin-top: 56px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 8px; }
-  </style>
 </head>
 <body>
 
 <h1>Functional Specification – [FEATURE NAME]</h1>
 
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
 <!-- ═══════════════════════════════════════════════════════
-     DOCUMENT HISTORY
+     DOCUMENT HISTORY  [BA-owned]
 ════════════════════════════════════════════════════════ -->
 <h2>Document History</h2>
-<table>
+<table border="1" cellpadding="5" cellspacing="0">
   <tr>
     <th>VERSION</th>
     <th>AUTHOR(S)</th>
@@ -99,13 +104,14 @@ Save a single HTML file using the template below. Fill every section from the so
   </tr>
 </table>
 
+
 <!-- ═══════════════════════════════════════════════════════
-     REFERENCE DOCUMENTATION
+     REFERENCE DOCUMENTATION  [BA-owned]
 ════════════════════════════════════════════════════════ -->
 <h2>Reference Documentation</h2>
-<table>
+<table border="1" cellpadding="5" cellspacing="0">
   <tr>
-    <th style="width:40%">Document</th>
+    <th>Document</th>
     <th>Link</th>
   </tr>
   <tr>
@@ -114,103 +120,154 @@ Save a single HTML file using the template below. Fill every section from the so
   </tr>
 </table>
 
-<!-- ═══════════════════════════════════════════════════════
-     FEATURE SUMMARY
-════════════════════════════════════════════════════════ -->
-<h2>Feature Summary</h2>
-<p>[One to three paragraphs describing the feature: what it does, why it is needed, and who benefits. Write from source materials only. Mark gaps as <span class="tbc">[TO BE CONFIRMED]</span>.]</p>
 
 <!-- ═══════════════════════════════════════════════════════
-     BUSINESS REQUIREMENTS
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>[One to three paragraphs describing the overall solution: what it does, why it is needed, and who benefits. Mark gaps as [TO BE CONFIRMED].]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
 ════════════════════════════════════════════════════════ -->
 <h2>Business Requirements</h2>
-<p>Format: <em>As a [actor] I want to [action] so that [benefit]</em></p>
-<table>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
   <tr>
-    <th style="width:90px">ID</th>
+    <th>ID</th>
     <th>Requirements</th>
     <th>Description</th>
   </tr>
   <tr>
     <td>BR-001</td>
     <td>As a [actor] I want to [action] so that [benefit]</td>
-    <td>[Additional detail, business rule, or image reference. Mark gaps as TO BE CONFIRMED.]</td>
+    <td>[Additional detail or business rule. Mark gaps as TO BE CONFIRMED.]</td>
   </tr>
 </table>
 
+
 <!-- ═══════════════════════════════════════════════════════
-     USE CASES
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
 ════════════════════════════════════════════════════════ -->
 <h2>Use Cases</h2>
-<table>
+<table border="1" cellpadding="5" cellspacing="0">
   <tr>
-    <th style="width:80px">UC#</th>
-    <th style="width:180px">PreCondition</th>
-    <th style="width:140px">Actor/s</th>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
     <th>Use Case</th>
     <th>Functionality Expected</th>
-    <th style="width:180px">Open Questions</th>
+    <th>Open Questions</th>
   </tr>
   <tr>
     <td>UC-001</td>
-    <td>[System state or data that must exist before this use case runs, or TO BE CONFIRMED]</td>
+    <td>[System state or data that must exist before this use case runs]</td>
     <td>[User role(s) or system(s) involved]</td>
     <td>[Name or short description of the use case]</td>
-    <td>[Step-by-step or narrative description of the expected system behaviour]</td>
-    <td>[Any unresolved question, or — if none]</td>
+    <td>[Step-by-step description of expected behaviour. Name the MuleSoft API called, e.g. "calls INT118 Web User Deactivation API".]</td>
+    <td>[Unresolved question, or — if none]</td>
   </tr>
 </table>
 
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
 <!-- ═══════════════════════════════════════════════════════
-     NON-FUNCTIONAL REQUIREMENTS
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — SLA, security, throughput,
+            error handling, retry policy, availability.
 ════════════════════════════════════════════════════════ -->
 <h2>Non-Functional Requirements</h2>
-<table>
+<table border="1" cellpadding="5" cellspacing="0">
   <tr>
-    <th style="width:90px">Requirement ID</th>
-    <th style="width:160px">Interface</th>
+    <th>Requirement ID</th>
+    <th>Interface</th>
     <th>Requirement Description</th>
-    <th style="width:130px">Category</th>
-    <th style="width:100px">Priority</th>
+    <th>Category</th>
+    <th>Priority</th>
   </tr>
   <tr>
     <td>NFR-001</td>
-    <td>[API / UI / Integration / Platform]</td>
+    <td>[API name e.g. INT118]</td>
     <td>[TO BE CONFIRMED]</td>
     <td>[Performance | Security | Availability | Scalability | Compliance | Auditability]</td>
-    <td><span class="pri-high">High</span></td>
-  </tr>
-  <tr>
-    <td>NFR-002</td>
-    <td>[Interface]</td>
-    <td>[TO BE CONFIRMED]</td>
-    <td>[Category]</td>
-    <td><span class="pri-medium">Medium</span></td>
+    <td>[High | Medium | Low]</td>
   </tr>
 </table>
 
+
 <!-- ═══════════════════════════════════════════════════════
-     TEST SCENARIOS & ACCEPTANCE CRITERIA
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
 ════════════════════════════════════════════════════════ -->
 <h2>Test Scenarios &amp; Acceptance Criteria</h2>
-<table>
+<table border="1" cellpadding="5" cellspacing="0">
   <tr>
-    <th style="width:90px">Use Case</th>
+    <th>Use Case</th>
     <th>Test Cases</th>
     <th>Acceptance Criteria</th>
-    <th style="width:200px">Test Data</th>
+    <th>Test Data</th>
   </tr>
   <tr>
     <td>UC-001</td>
-    <td>[Given … When … Then … description of the test scenario]</td>
-    <td>[The condition that must be true for the test to pass]</td>
-    <td>[Sample input values, system state, or TO BE CONFIRMED]</td>
+    <td>[Given … When … Then … description of the API-level test scenario, including HTTP method, endpoint, and payload where known]</td>
+    <td>[The condition that must be true for the test to pass, e.g. HTTP 200 returned with expected response body]</td>
+    <td>[Sample request values, system state, or TO BE CONFIRMED]</td>
   </tr>
 </table>
-
-<footer>
-  Generated by MSC BA Agent · functional-spec-generator · [DATE]
-</footer>
 
 </body>
 </html>
