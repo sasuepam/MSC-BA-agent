@@ -28,7 +28,7 @@ MSC BA MCP Server running on http://localhost:8080
 **Terminal 2 — Claude Code** (this is where you work):
 ```bash
 cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent"
-claude
+codemie-claude
 ```
 
 ---
@@ -104,7 +104,7 @@ Check that Terminal 1 is still running. If it stopped, restart it with `uv run m
 Make sure you are in the project directory when you launch Claude Code:
 ```bash
 cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent"
-claude
+codemie-claude
 ```
 
 **Confluence or Jira errors (401 / 403)**

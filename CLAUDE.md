@@ -12,7 +12,7 @@ Open a terminal, navigate to the project, and run:
 
 ```bash
 cd "C:\Users\Sarah_Suda\MSC- Mule BA Agent"
-claude -p "/ba-workflow"
+codemie-claude -p "/ba-workflow"
 ```
 
 This starts the main orchestrator, which will guide you through the full pipeline interactively.
@@ -21,10 +21,10 @@ To invoke a specific agent or skill directly:
 
 ```bash
 # Generate a spec from input materials
-claude -p "/ba-workflow" --input "generate spec for <feature name>"
+codemie-claude -p "/ba-workflow" --input "generate spec for <feature name>"
 
 # Run the full pipeline non-interactively (end-to-end)
-claude -p "Run the ba-workflow end-to-end for <feature name> using <input file or text>"
+codemie-claude -p "Run the ba-workflow end-to-end for <feature name> using <input file or text>"
 ```
 
 ---
@@ -81,13 +81,13 @@ Input materials
 
 | File | Type | Invoked by |
 |------|------|------------|
-| `.claude/agents/functional-spec-generator.md` | Agent | `ba-workflow`, or directly |
-| `.claude/agents/ba-story-generator.md` | Agent | `ba-workflow`, or directly |
-| `.claude/agents/ba-validator.md` | Agent | `ba-workflow`, or directly |
-| `.claude/agents/jira-publisher.md` | Agent | `ba-workflow`, or directly |
-| `.claude/agents/confluence-publisher.md` | Agent | `ba-workflow`, or directly |
-| `.claude/commands/ba-amend.md` | Skill | `/ba-amend`, or via `ba-workflow` |
-| `.claude/commands/ba-workflow.md` | Skill | `/ba-workflow` |
+| `.codemie-claude/agents/functional-spec-generator.md` | Agent | `ba-workflow`, or directly |
+| `.codemie-claude/agents/ba-story-generator.md` | Agent | `ba-workflow`, or directly |
+| `.codemie-claude/agents/ba-validator.md` | Agent | `ba-workflow`, or directly |
+| `.codemie-claude/agents/jira-publisher.md` | Agent | `ba-workflow`, or directly |
+| `.codemie-claude/agents/confluence-publisher.md` | Agent | `ba-workflow`, or directly |
+| `.codemie-claude/commands/ba-amend.md` | Skill | `/ba-amend`, or via `ba-workflow` |
+| `.codemie-claude/commands/ba-workflow.md` | Skill | `/ba-workflow` |
 
 ---
 
