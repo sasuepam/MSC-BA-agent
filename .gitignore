@@ -1,13 +1,36 @@
-# Credentials
+# Credentials — never commit
 mcp/.env
+*.env
+.env.*
+!.env.example
 
-# Python cache
+# Claude Code local session state — personal, not shared
+.claude/settings.local.json
+memory/
+
+# Python build artifacts
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+.uv/
+.venv/
+venv/
+dist/
+*.egg-info/
 
-# Generated output (local working files — not versioned)
-output/
+# Generated previews — local only
+previews/*.html
+previews/*.htm
+!previews/.gitkeep
 
-# Office temp files
+# Generated RAML files — optional (uncomment to exclude)
+# raml/
+
+# OS / editor
+.DS_Store
+Thumbs.db
 ~$*
+*.swp
+*.swo
+.idea/
+.vscode/

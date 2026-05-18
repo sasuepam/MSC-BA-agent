@@ -16,12 +16,12 @@ def register(mcp: FastMCP) -> None:
     def hello_world(name: str = "Codemie") -> str:
         """Hello World test tool. Call this to verify the MCP connection is working. Optionally pass a name."""
         timestamp = datetime.now(UTC).strftime("%H:%M:%S UTC")
-        return f"Hello {name}! MSC BA MCP Server v{__version__} is connected and running at {timestamp}."
+        return f"Hello {name}! MSC MCP Server v{__version__} is connected and running at {timestamp}."
 
     @mcp.tool()
     def echo(message: str) -> str:
         """Echo back the provided message. Use this to test connectivity."""
-        return f"[MSC BA MCP] {message}"
+        return f"[MSC MCP] {message}"
 
     @mcp.tool()
     def health_check() -> dict:

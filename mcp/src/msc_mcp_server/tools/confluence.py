@@ -21,17 +21,24 @@ from msc_mcp_server.config import settings
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def _auth_header() -> str:
+    """Build the Basic auth header value from configured email + API token."""
     credentials = f"{settings.confluence_email}:{settings.confluence_token}"
     encoded = base64.b64encode(credentials.encode()).decode()
     return f"Basic {encoded}"
 
 
 def _base_url() -> str:
+    """Return the Confluence base URL with no trailing slash."""
     return settings.confluence_url.rstrip("/")
 
 
 def _check_config() -> str | None:
+    """Return an error message if Confluence credentials are not configured, else None."""
     if not settings.confluence_url:
         return "Confluence not configured — set MSC_CONFLUENCE_URL in .env (e.g. https://yourcompany.atlassian.net)"
     if not settings.confluence_email:
@@ -42,6 +49,8 @@ def _check_config() -> str | None:
 
 
 def _strip_html(html: str) -> str:
+    """Strip Confluence storage-format HTML/XML tags and return clean plain text."""
+
     class _Stripper(HTMLParser):
         def __init__(self):
             super().__init__()
@@ -53,6 +62,7 @@ def _strip_html(html: str) -> str:
     stripper = _Stripper()
     stripper.feed(html)
     text = " ".join(stripper.parts)
+    # Collapse runs of whitespace / newlines into single spaces
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -61,6 +71,13 @@ def _default_headers() -> dict:
 
 
 def _get_write_config(instance: str) -> tuple[str, str] | None:
+    """Return (base_url, auth_header) for the given write instance.
+
+    instance = "sandbox" → uses MSC_CONFLUENCE_SANDBOX_* settings
+    instance = "prod"    → uses MSC_CONFLUENCE_* settings (careful!)
+
+    Returns None if the requested instance is not configured.
+    """
     if instance == "sandbox":
         url = settings.confluence_sandbox_url.rstrip("/")
         email = settings.confluence_sandbox_email
@@ -70,12 +87,14 @@ def _get_write_config(instance: str) -> tuple[str, str] | None:
         auth = "Basic " + __import__("base64").b64encode(f"{email}:{token}".encode()).decode()
         return url, auth
     else:
+        # prod
         url = settings.confluence_url.rstrip("/")
         auth = _auth_header()
         return url, auth
 
 
 def _check_write_config(instance: str) -> str | None:
+    """Return error string if write instance is not configured."""
     if instance == "sandbox":
         if not settings.confluence_sandbox_url:
             return "Sandbox not configured — set MSC_CONFLUENCE_SANDBOX_URL, MSC_CONFLUENCE_SANDBOX_EMAIL, MSC_CONFLUENCE_SANDBOX_TOKEN in .env"
@@ -83,6 +102,10 @@ def _check_write_config(instance: str) -> str | None:
             return "Sandbox credentials incomplete — check MSC_CONFLUENCE_SANDBOX_EMAIL and MSC_CONFLUENCE_SANDBOX_TOKEN"
     return _check_config()
 
+
+# ---------------------------------------------------------------------------
+# Tool registration
+# ---------------------------------------------------------------------------
 
 def register(mcp: FastMCP) -> None:
     """Register Confluence tools on the MCP server instance."""
@@ -94,9 +117,10 @@ def register(mcp: FastMCP) -> None:
         Returns the page title, metadata, direct URL, and — when include_body
         is True — the full page content as plain text (HTML tags stripped).
 
-        Args:
-            page_id: Numeric page ID from the Confluence URL.
-            include_body: Whether to fetch and strip page body content.
+        The page_id is the number visible in the Confluence URL, e.g.
+        https://yourcompany.atlassian.net/wiki/spaces/DEV/pages/123456789
+                                                                 ^^^^^^^^^
+        Use confluence_search or confluence_get_space_pages to discover IDs.
         """
         err = _check_config()
         if err:
@@ -140,15 +164,21 @@ def register(mcp: FastMCP) -> None:
     async def confluence_search(query: str, space_key: str = "", limit: int = 10) -> dict:
         """Search Confluence pages by text content or title.
 
-        Args:
-            query: Search text.
-            space_key: Optional — limit search to this space.
-            limit: Max results (1-50).
+        Searches across all spaces by default, or within a specific space when
+        space_key is provided. Returns a list of matching pages with excerpts.
+
+        Examples:
+          - confluence_search("MuleSoft deployment guide")
+          - confluence_search("API design", space_key="DEV")
+          - confluence_search("incident runbook", space_key="OPS", limit=5)
+
+        To read full content of a result, pass its id to confluence_get_page.
         """
         err = _check_config()
         if err:
             return {"error": err}
 
+        # Build CQL query — v1 search API (no v2 equivalent exists yet)
         cql_parts = ["type = page", f'text ~ "{query}"']
         if space_key:
             cql_parts.append(f'space = "{space_key}"')
@@ -193,9 +223,12 @@ def register(mcp: FastMCP) -> None:
     async def confluence_get_space_pages(space_key: str, limit: int = 25) -> dict:
         """List pages in a Confluence space by its space key.
 
-        Args:
-            space_key: Space key (e.g. "DTP", "DTTP").
-            limit: Max pages to return (1-250).
+        Returns page titles and IDs for navigation — use confluence_get_page
+        to fetch full content for any page in the list.
+
+        The space_key is the short identifier shown in Confluence URLs, e.g.:
+          https://yourcompany.atlassian.net/wiki/spaces/DEV/...
+                                                         ^^^  <- this is the key
         """
         err = _check_config()
         if err:
@@ -204,6 +237,7 @@ def register(mcp: FastMCP) -> None:
         limit = max(1, min(limit, 250))
 
         async with httpx.AsyncClient(timeout=30.0) as client:
+            # Step 1: resolve space key → numeric space ID (required by v2 API)
             space_resp = await client.get(
                 f"{_base_url()}/wiki/api/v2/spaces",
                 headers=_default_headers(),
@@ -219,6 +253,7 @@ def register(mcp: FastMCP) -> None:
             space = spaces[0]
             space_id = space["id"]
 
+            # Step 2: fetch pages in that space
             pages_resp = await client.get(
                 f"{_base_url()}/wiki/api/v2/spaces/{space_id}/pages",
                 headers=_default_headers(),
@@ -249,8 +284,11 @@ def register(mcp: FastMCP) -> None:
     async def confluence_get_child_pages(page_id: str) -> dict:
         """Get the direct child pages of a Confluence page.
 
-        Args:
-            page_id: Parent page ID.
+        Use this to navigate the page tree. Given a parent page ID, returns all
+        immediate children with their IDs and titles.
+
+        Useful for exploring a section of a space — e.g. find all runbooks under
+        an "Operations" parent page, or all API docs under a "Developer Guides" page.
         """
         err = _check_config()
         if err:
@@ -298,13 +336,19 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Create a new Confluence page.
 
+        Creates a page in the specified space. Content must be in Confluence
+        storage format (HTML-like markup with <h1>, <table>, <ac:structured-macro> etc).
+
         Args:
-            space_key: Space key (e.g. "DTP", "DTTP").
+            space_key: The space key (e.g. "DTP", "DEV"). Find it in the Confluence URL.
             title: Page title (must be unique within the space).
             content: Page body in Confluence storage format HTML.
-            parent_id: Optional parent page ID.
-            status: "current" (published) or "draft".
-            instance: "sandbox" (default, safe) or "prod".
+            parent_id: Optional parent page ID. If empty, page is created at space root.
+            status: "current" (published) or "draft". Defaults to "current".
+            instance: "sandbox" (default, safe) or "prod" (careful — writes to production!).
+
+        Returns:
+            Page ID, title, and URL of the created page.
         """
         err = _check_write_config(instance)
         if err:
@@ -352,6 +396,7 @@ def register(mcp: FastMCP) -> None:
         if resp.status_code == 403:
             return {"error": "Permission denied — check your Confluence token has write access"}
         if resp.status_code == 409:
+            # Page already exists — find it and update instead (upsert behaviour)
             async with httpx.AsyncClient(timeout=30.0) as client2:
                 search_resp = await client2.get(
                     f"{base_url}/wiki/rest/api/content",
@@ -375,7 +420,7 @@ def register(mcp: FastMCP) -> None:
                                 "body": {"representation": "storage", "value": content},
                                 "version": {
                                     "number": current_version + 1,
-                                    "message": "Updated by Codemie BA Agent",
+                                    "message": "Updated by CodeMie API Design Generator",
                                 },
                             },
                         )
@@ -416,13 +461,19 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Update an existing Confluence page.
 
+        Replaces the page content. You must provide the current version number
+        (get it from confluence_get_page). Each update increments version by 1.
+
         Args:
             page_id: Numeric page ID from the Confluence URL.
             title: Page title (can be same or updated).
             content: New page body in Confluence storage format HTML.
-            version: Current version number (get from confluence_get_page).
+            version: Current version number. Use confluence_get_page to get it.
             status: "current" (published) or "draft".
             instance: "sandbox" (default) or "prod".
+
+        Returns:
+            Updated page ID, title, new version number, and URL.
         """
         err = _check_write_config(instance)
         if err:
@@ -445,7 +496,7 @@ def register(mcp: FastMCP) -> None:
                     "body": {"representation": "storage", "value": content},
                     "version": {
                         "number": version + 1,
-                        "message": "Updated by Codemie BA Agent",
+                        "message": "Updated by CodeMie API Design Generator",
                     },
                 },
             )
@@ -477,8 +528,14 @@ def register(mcp: FastMCP) -> None:
     async def confluence_delete_page(page_id: str) -> dict:
         """Delete a Confluence page by ID.
 
+        Permanently deletes the page. Use with caution — this cannot be undone
+        unless you restore from the Confluence trash.
+
         Args:
             page_id: Numeric page ID to delete.
+
+        Returns:
+            Success confirmation or error message.
         """
         err = _check_config()
         if err:

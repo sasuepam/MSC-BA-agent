@@ -1,14 +1,30 @@
 {
-  "permissions": {
-    "allow": [
-      "Read",
-      "Write",
-      "Bash(*)"
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "confluence_create_page|confluence_update_page",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python mcp/scripts/validate_before_write.py",
+            "timeout": 30,
+            "statusMessage": "Validating page for hallucinations..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "confluence_create_page",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python mcp/scripts/post_generate_report.py",
+            "timeout": 15,
+            "statusMessage": "Generating coverage report..."
+          }
+        ]
+      }
     ]
-  },
-  "mcpServers": {
-    "msc-ba": {
-      "url": "http://localhost:8080/mcp"
-    }
   }
 }

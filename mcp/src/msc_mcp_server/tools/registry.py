@@ -4,6 +4,8 @@ To add a new tool module:
 1. Create a new file in src/msc_mcp_server/tools/ (e.g., jira.py)
 2. Define a `register(mcp: FastMCP) -> None` function in it
 3. Add the module name to TOOL_MODULES below
+
+That's it — the registry calls each module's register() on startup.
 """
 
 import importlib
@@ -13,6 +15,8 @@ from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
+# Add new tool module names here as you build integrations.
+# Each module must expose: register(mcp: FastMCP) -> None
 TOOL_MODULES: list[str] = [
     "demo",
     "confluence",    # read + write

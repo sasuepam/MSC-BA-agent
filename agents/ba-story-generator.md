@@ -1,6 +1,6 @@
 ---
 name: ba-story-generator
-description: Reads a functional specification HTML file from output/specs/ and generates Jira-ready BA stories (Change Requests and User Stories) saved to output/stories/. Invoke this agent when the user wants to generate BA stories, CRs, or user stories from a functional spec.
+description: Reads a functional specification HTML file from output/specs/ and generates Jira-ready BA stories (Change Requests and User Stories) saved as HTML to output/stories/. Invoke this agent when the user wants to generate BA stories, CRs, or user stories from a functional spec.
 tools: Read, Write
 ---
 
@@ -120,16 +120,78 @@ Acceptance Criteria (BDD):
 
 Derive an `initiative-slug` from the spec filename or feature name (lowercase, hyphens, no spaces).
 
-Ensure the output directory exists by checking for `C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\stories\` — create it if needed using Write to a placeholder, or note it must exist.
+Save the generated stories as a plain HTML file to:
+`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\stories\<initiative-slug>.html`
 
-Save the generated stories as a Markdown file to:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\stories\<initiative-slug>.md`
+The output must be plain HTML — **no `<style>` blocks, no inline `style=` attributes, no CSS classes, no external CSS or JS**. Use only `border="1" cellpadding="5" cellspacing="0"` on tables.
 
-The file must contain:
-1. A header with the initiative/feature name
-2. A **Splitting Rationale** section explaining how stories were grouped and any ADF interfaces excluded
-3. All CR stories, clearly separated with `---`
-4. All User Stories, clearly separated with `---`
+Structure the HTML file as follows:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BA Stories – [FEATURE NAME]</title>
+</head>
+<body>
+
+<h1>BA Stories – [FEATURE NAME]</h1>
+
+<h2>Splitting Rationale</h2>
+<p>[Explain how stories were grouped and any ADF interfaces excluded.]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Story</th><th>Scope</th><th>Reason for separation (or consolidation)</th></tr>
+  <tr><td>[CR-1 or US-1]</td><td>[scope summary]</td><td>[reason]</td></tr>
+</table>
+
+<!-- Repeat the block below for each CR -->
+<h2>CR: [Summary title]</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Type</td><td>CR</td></tr>
+  <tr><td>Summary</td><td>[Jira-style title, max 10 words]</td></tr>
+  <tr><td>Change Scope</td><td>[specific technical detail]</td></tr>
+  <tr><td>Rationale</td><td>[business reason]</td></tr>
+  <tr><td>Mule Specification Document</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>High Level Architecture Document</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>API Documentation</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>Confluence Page</td><td>[link or TO BE CONFIRMED]</td></tr>
+</table>
+<h3>Acceptance Criteria</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Given</th><th>When</th><th>Then</th></tr>
+  <tr><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
+</table>
+
+<!-- Repeat the block below for each User Story -->
+<h2>User Story: [Summary title]</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Type</td><td>User Story</td></tr>
+  <tr><td>Summary</td><td>[Jira-style title, max 12 words]</td></tr>
+  <tr><td>User Story Statement</td><td>As a [persona] I want [goal] so that [benefit]</td></tr>
+  <tr><td>Interface Name</td><td>[e.g. INT118 MyMSC: Web User Deactivation]</td></tr>
+  <tr><td>Purpose</td><td>[what this API does and who consumes it]</td></tr>
+  <tr><td>Users</td><td>[consuming system or end user]</td></tr>
+  <tr><td>Authentication</td><td>[authentication method]</td></tr>
+  <tr><td>Happy Path</td><td>[step-by-step main success flow]</td></tr>
+  <tr><td>Alternative Paths</td><td>[alternative scenarios]</td></tr>
+  <tr><td>Error Scenarios</td><td>[error cases and expected behaviour]</td></tr>
+  <tr><td>Mule Specification Document</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>High Level Architecture Document</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>API Documentation</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>Confluence Page</td><td>[link or TO BE CONFIRMED]</td></tr>
+</table>
+<h3>Acceptance Criteria</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Given</th><th>When</th><th>Then</th></tr>
+  <tr><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
+</table>
+
+</body>
+</html>
+```
 
 ---
 

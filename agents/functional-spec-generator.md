@@ -44,7 +44,7 @@ Always distinguish between what the MuleSoft team owns (the API contract and imp
 
 ## Workflow
 
-1. Read all provided input materials (files, pasted text, URLs via WebFetch, Confluence pages via MCP tool if available).
+1. Read all provided input materials (files, pasted text, URLs via WebFetch, Confluence pages via MCP tool if available). **Do NOT read files from `output/specs/`, `output/stories/`, or `output/validation/` unless the caller has explicitly named one of those files as an input. Those directories contain previous outputs for other features and must not be used to infer format or content.**
 2. Identify: the overall solution being delivered, and the specific API(s) the MuleSoft team must build or change to support it.
 3. Extract: feature name, actors, business rules, solution use cases, API names/operations, and any known gaps.
 3. Derive a `feature_name` slug (lowercase, underscores, no spaces) from the feature title.

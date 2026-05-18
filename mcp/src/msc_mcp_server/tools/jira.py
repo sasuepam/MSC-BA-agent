@@ -77,6 +77,7 @@ def register(mcp: FastMCP) -> None:
         data = resp.json()
         fields = data.get("fields", {})
 
+        # Extract description text
         desc = fields.get("description", {})
         desc_text = ""
         if isinstance(desc, dict):
@@ -104,9 +105,9 @@ def register(mcp: FastMCP) -> None:
         """Search Jira issues using JQL (Jira Query Language).
 
         Examples:
-          - jira_search("project = DTTP25 AND status = 'In Progress'")
+          - jira_search("project = DTTP AND status = 'In Progress'")
           - jira_search("assignee = currentUser() AND sprint in openSprints()")
-          - jira_search("text ~ 'functional spec' AND project = DTTP25")
+          - jira_search("text ~ 'Klarna' AND project = DTTP25")
 
         Args:
             jql: JQL query string.
@@ -169,18 +170,22 @@ def register(mcp: FastMCP) -> None:
         """Create a new Jira issue.
 
         Args:
-            project_key: Project key (e.g. "DTTP25").
+            project_key: Project key (e.g. "DTTP25", "TEST").
             summary: Issue title/summary.
             issue_type: "Task", "Story", "Bug", "Epic", "Sub-task". Default: "Task".
-            description: Issue description (plain text).
+            description: Issue description text (plain text, will be converted to Jira doc format).
             assignee_email: Email of the assignee (optional).
             labels: List of label strings (optional).
             priority: "Highest", "High", "Medium", "Low", "Lowest". Default: "Medium".
+
+        Returns:
+            Created issue key, ID, and URL.
         """
         err = _check_config()
         if err:
             return {"error": err}
 
+        # Build description in Atlassian Document Format
         desc_doc = {
             "type": "doc",
             "version": 1,
@@ -204,6 +209,7 @@ def register(mcp: FastMCP) -> None:
             fields["labels"] = labels
 
         if assignee_email:
+            # Look up accountId by email
             async with httpx.AsyncClient(timeout=30.0) as client:
                 user_resp = await client.get(
                     f"{_base_url()}/rest/api/3/user/search",
@@ -249,11 +255,14 @@ def register(mcp: FastMCP) -> None:
     ) -> dict:
         """Update an existing Jira issue.
 
+        Can update summary, description, assignee, labels.
+        To change status use status_transition (e.g. "In Progress", "Done").
+
         Args:
             issue_key: Issue key like DTTP25-123.
             summary: New summary (leave empty to keep current).
             description: New description text (leave empty to keep current).
-            status_transition: Transition name (e.g. "In Progress", "Done", "To Do").
+            status_transition: Transition name to move issue to (e.g. "In Progress", "Done", "To Do").
             assignee_email: New assignee email (leave empty to keep current).
             labels: New labels list (replaces existing labels).
         """
@@ -279,6 +288,7 @@ def register(mcp: FastMCP) -> None:
             updates["labels"] = [{"set": labels}]
 
         async with httpx.AsyncClient(timeout=30.0) as client:
+            # Update fields
             if updates:
                 resp = await client.put(
                     f"{_base_url()}/rest/api/3/issue/{issue_key}",
@@ -288,6 +298,7 @@ def register(mcp: FastMCP) -> None:
                 if not resp.is_success and resp.status_code != 204:
                     return {"error": f"Update failed {resp.status_code}: {resp.text[:200]}"}
 
+            # Handle status transition
             if status_transition:
                 trans_resp = await client.get(
                     f"{_base_url()}/rest/api/3/issue/{issue_key}/transitions",

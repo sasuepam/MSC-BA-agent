@@ -16,12 +16,14 @@ class ServerSettings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8080
-    server_name: str = "msc-ba-mcp-server"
-    transport: str = "sse"
+    server_name: str = "msc-mcp-server"
+    transport: str = "sse"  # "sse" or "stdio"
     debug: bool = False
 
     # Authentication token that Codemie must send to access this server
     api_token: str = ""
+
+    # --- Downstream integration credentials (added as integrations are built) ---
 
     # Jira
     jira_url: str = ""
@@ -44,7 +46,7 @@ class ServerSettings(BaseSettings):
     anypoint_client_secret: str = ""
 
     # Git provider
-    git_provider: str = ""
+    git_provider: str = ""  # "github", "gitlab", "bitbucket"
     git_token: str = ""
     git_base_url: str = ""
 

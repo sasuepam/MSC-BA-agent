@@ -31,10 +31,12 @@ class BearerTokenMiddleware:
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        # Only check HTTP requests (pass through lifespan, websocket, etc.)
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
+        # Skip auth if no token configured
         if not settings.api_token:
             await self.app(scope, receive, send)
             return
@@ -54,11 +56,14 @@ class BearerTokenMiddleware:
 
     @staticmethod
     def _extract_token(scope) -> str | None:
+        """Return the token from Authorization header or ?token= query param, or None."""
+        # 1. Check Authorization: Bearer header
         headers = dict(scope.get("headers", []))
         auth_value = headers.get(b"authorization", b"").decode()
         if auth_value.startswith("Bearer "):
             return auth_value.removeprefix("Bearer ").strip()
 
+        # 2. Fall back to ?token= query parameter
         qs = scope.get("query_string", b"").decode()
         params = parse_qs(qs)
         token_list = params.get("token")
@@ -69,6 +74,7 @@ class BearerTokenMiddleware:
 
     @staticmethod
     async def _send_json(send, status: int, body: dict):
+        """Send a JSON error response via raw ASGI."""
         payload = json.dumps(body).encode()
         await send({
             "type": "http.response.start",

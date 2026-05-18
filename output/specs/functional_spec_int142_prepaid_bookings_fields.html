@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – INT142 Prepaid Bookings: Excursions and Onboard Services Fields Added</title>
+</head>
+<body>
+
+<h1>Functional Specification – INT142 Prepaid Bookings: Excursions and Onboard Services Fields Added</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Sarah Suda</td>
+    <td>18/May/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>INT142 MyMSC Booking Details – Interface Agreement (IA)</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/3911614639 (access restricted — contents marked [TO BE CONFIRMED])</td>
+  </tr>
+  <tr>
+    <td>INT142 MyMSC Booking Details – Confluence Requirements Page</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Excursions API (upstream provider) – Interface Agreement</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Onboard Services API (upstream provider) – Interface Agreement</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>DTS Booking Response – Field Contract</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>MyMSC Private Area – UX / UI Specification for "Already Purchased" card</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+  INT142 (MyMSC Booking Details) is the MuleSoft API that provides authenticated customers in the MyMSC private area with the full details of their cruise bookings, including any prepaid excursions and onboard services they have already purchased. Customers access this area post-login to review their itinerary, purchased extras, and booking-level information.
+</p>
+<p>
+  This change enriches the data returned by INT142 for prepaid items (both excursions and onboard services) with additional fields that are currently missing from the API response. For all prepaid items, a <code>longDescription</code> field is added. For excursions specifically, a <code>duration</code> field and a <code>minimumPassengersRequired</code> (mapped as <code>MinPaxRequired</code>) are added, together with a full set of activity characteristic flags sourced from the excursion provider and exposed under an <code>ActivityMoreInfo</code> object. These flags cover attributes such as best seller status, transport type, accessibility, included meals and drinks, guide availability, language codes, and physical difficulty, all converted from source boolean or string values to the target boolean type as required.
+</p>
+<p>
+  In addition to the enrichment work, a defect was raised related to previously purchased excursions: when an excursion no longer exists in the upstream excursions API (for example because it has been retired or seasonally removed), the "Already Purchased" card in MyMSC Booking Details displays incorrectly — the itinerary day, port name, and duration labels are empty and replaced by placeholders, because the data is not returned in the booking response and the excursion cannot be found in the excursion API. This feature must also address how the "Already Purchased" card should behave and what data should be returned for excursions that are present in the booking history but are no longer available in the excursions API. The expected layout and fallback data strategy for this scenario are [TO BE CONFIRMED] pending UX and product alignment.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a MyMSC customer, I want to see a detailed description of each excursion or onboard service I have already purchased so that I can review what is included in my booking.</td>
+    <td>The <code>longDescription</code> field must be returned for all prepaid items (both excursions and onboard services) in the INT142 API response. This field is sourced from the item info returned by the relevant upstream provider API.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a MyMSC customer, I want to see the duration of a purchased excursion so that I can plan my time at each port of call.</td>
+    <td>The <code>duration</code> field must be returned for prepaid excursion items in the INT142 API response. This field is sourced from the excursions API. It is not applicable to onboard services.</td>
+  </tr>
+  <tr>
+    <td>BR-003</td>
+    <td>As a MyMSC customer, I want to see the minimum number of passengers required for a purchased excursion so that I understand any group size constraints that apply to my booking.</td>
+    <td>The <code>minimumPassengersRequired</code> field (mapped as <code>MinPaxRequired</code>) must be returned for prepaid excursion items in the INT142 API response. This field is sourced from the excursions API and is not applicable to onboard services.</td>
+  </tr>
+  <tr>
+    <td>BR-004</td>
+    <td>As a MyMSC customer, I want to see the activity characteristics of a purchased excursion (such as whether it is family-friendly, includes meals, involves walking, or is accessible by wheelchair) so that I can make informed decisions about attendance and preparation.</td>
+    <td>A set of activity characteristic flags must be returned under an <code>ActivityMoreInfo</code> object for prepaid excursion items. The full list of flags is defined in the field mapping table in the Use Cases section. All flags are boolean values converted from the source fields provided by the excursions API. Guide language codes (<code>GuideLang</code>) are returned as an array of strings. These flags are not applicable to onboard services.</td>
+  </tr>
+</table>
+
+
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FIELD MAPPING TABLE  [BA-owned]
+     Scope: source field → target field for INT142 response,
+            scoped to the prepaid bookings enrichment changes.
+════════════════════════════════════════════════════════ -->
+<h2>Field Mapping – Prepaid Bookings Enrichment (INT142)</h2>
+<p>All mappings below apply to the INT142 MyMSC Booking Details API response. The source column refers to the field name as returned by the upstream provider API (excursions API or onboard services API). The target column refers to the field name as it must appear in the INT142 API response.</p>
+
+<h3>Fields applicable to all prepaid items (excursions and onboard services)</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Source Field (Upstream Provider API)</th>
+    <th>Target Field (INT142 Response)</th>
+    <th>Type</th>
+    <th>Conversion / Notes</th>
+  </tr>
+  <tr>
+    <td>longDescription</td>
+    <td>longDescription</td>
+    <td>String</td>
+    <td>Sourced from item info in the upstream provider API response for both excursions and onboard services. No conversion required. [TO BE CONFIRMED: confirm source path within the item info object for onboard services]</td>
+  </tr>
+</table>
+
+<h3>Fields applicable to prepaid excursions only</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Source Field (Excursions API)</th>
+    <th>Target Field (INT142 Response)</th>
+    <th>Type</th>
+    <th>Conversion / Notes</th>
+  </tr>
+  <tr>
+    <td>duration</td>
+    <td>duration</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>Direct mapping from excursions API. Unit and format (e.g. minutes, ISO 8601 duration string) [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>minimumPassengersRequired</td>
+    <td>MinPaxRequired</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>Direct mapping. Source and target data types [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>isBestSeller</td>
+    <td>ActivityMoreInfo.BestSeller</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isBusTransportAvailable</td>
+    <td>ActivityMoreInfo.Bus</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isInvolvesWalking</td>
+    <td>ActivityMoreInfo.ByFoot</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isCulturalActivity</td>
+    <td>ActivityMoreInfo.Cultural</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isDrinkIncluded</td>
+    <td>ActivityMoreInfo.Drink</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isFamilyFriendlyActivity</td>
+    <td>ActivityMoreInfo.ForFamily</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isMealIncluded</td>
+    <td>ActivityMoreInfo.Lunch</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isFilmingAllowed</td>
+    <td>ActivityMoreInfo.NoFilm</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean. Note: the target field name is NoFilm — confirm with the SA whether the boolean semantics are inverted (i.e. NoFilm = true means filming is NOT allowed, which is the inverse of the source field isFilmingAllowed = true meaning filming IS allowed). [TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>isGuideAvailable</td>
+    <td>ActivityMoreInfo.NoGuide</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean. Note: the target field name is NoGuide — confirm with the SA whether the boolean semantics are inverted (i.e. NoGuide = true means a guide is NOT available, which is the inverse of the source field isGuideAvailable = true meaning a guide IS available). [TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>guideLanguageCodes</td>
+    <td>ActivityMoreInfo.GuideLang</td>
+    <td>Array of strings</td>
+    <td>Direct mapping as an array of language code strings. No boolean conversion. Source format (e.g. ISO 639-1 codes) [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>isShoppingIncluded</td>
+    <td>ActivityMoreInfo.Shopping</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isSnackIncluded</td>
+    <td>ActivityMoreInfo.Snack</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isSwimmingIncluded</td>
+    <td>ActivityMoreInfo.Swim</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isTastingIncluded</td>
+    <td>ActivityMoreInfo.Tasting</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isTourActivity</td>
+    <td>ActivityMoreInfo.Tour</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isWalkingDifficulty</td>
+    <td>ActivityMoreInfo.WalkingDifficulty</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isWheelchairFriendly</td>
+    <td>ActivityMoreInfo.Wheelchair</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isLimitedSeats</td>
+    <td>ActivityMoreInfo.NbrMaxWaitList</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean. Note: the target field name NbrMaxWaitList implies a numeric waitlist count rather than a boolean flag — confirm with the SA whether the target type is boolean or numeric. [TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>isBestRated</td>
+    <td>ActivityMoreInfo.BestRated</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Test Case</th>
+    <th>Scenario</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+  <tr>
+    <td>TC-001 – HAPPY PATH</td>
+    <td>Authenticated customer retrieves a booking with a prepaid excursion. All new fields are returned: <code>longDescription</code>, <code>duration</code>, <code>MinPaxRequired</code>, and <code>ActivityMoreInfo</code> flags including <code>GuideLang</code> as an array of strings. Excursion-specific fields are absent from onboard service items in the same response.</td>
+    <td>HTTP 200 returned. All mapped fields are present and correctly typed on the excursion item. <code>ActivityMoreInfo</code> flags are boolean. <code>GuideLang</code> is an array of strings. Excursion-only fields are not present on onboard service items.</td>
+    <td>Booking with at least one prepaid excursion and one prepaid onboard service, where the upstream excursions API returns values for all new source fields including a non-empty <code>guideLanguageCodes</code> array.</td>
+  </tr>
+  <tr>
+    <td>TC-002 – HAPPY PATH</td>
+    <td>Authenticated customer retrieves a booking with a prepaid onboard service (no excursions). <code>longDescription</code> is returned for the onboard service item.</td>
+    <td>HTTP 200 returned. <code>longDescription</code> is populated on the onboard service item. Fields <code>duration</code>, <code>MinPaxRequired</code>, and <code>ActivityMoreInfo</code> are absent from the onboard service item.</td>
+    <td>Booking with at least one prepaid onboard service and no prepaid excursions in DTS UAT.</td>
+  </tr>
+  <tr>
+    <td>TC-003 – ALT PATH</td>
+    <td>Authenticated customer retrieves a booking where a previously purchased excursion is no longer available in the upstream excursions API (returns 404 or empty). INT142 must not fail — it must return the booking details using available fallback data.</td>
+    <td>HTTP 200 returned. The excursion item is present in the response with itinerary day, port name, and excursion name populated from fallback data. A 500 or 404 is not returned to the frontend. Fallback field behaviour is [TO BE CONFIRMED] pending UX/product alignment.</td>
+    <td>Booking where a prepaid excursion ID no longer exists in the upstream excursions UAT environment, or a mock configured to return 404 for a specified excursion ID.</td>
+  </tr>
+  <tr>
+    <td>TC-004 – ALT PATH</td>
+    <td><code>ActivityMoreInfo.NoFilm</code> and <code>ActivityMoreInfo.NoGuide</code> boolean inversion semantics. Source fields <code>isFilmingAllowed</code> and <code>isGuideAvailable</code> use positive naming; target fields use negative naming. Correct inversion must be verified.</td>
+    <td><code>ActivityMoreInfo.NoFilm</code> and <code>ActivityMoreInfo.NoGuide</code> reflect the agreed inversion logic. Expected values are [TO BE CONFIRMED] pending SA confirmation of inversion semantics.</td>
+    <td>Prepaid excursion where the upstream excursions API returns known values for <code>isFilmingAllowed</code> and <code>isGuideAvailable</code>. Confirm inversion logic with SA before test execution.</td>
+  </tr>
+  <tr>
+    <td>TC-005 – ERROR</td>
+    <td>Unauthenticated request to INT142. Request is made without a valid authentication token.</td>
+    <td>HTTP 401 Unauthorised returned. No booking data is returned. Authentication enforcement is not affected by the field mapping changes in this feature.</td>
+    <td>GET request to INT142 endpoint with no Authorization header, an expired token, or an invalid token. Confirm token type and header format with the SA.</td>
+  </tr>
+</table>
+
+</body>
+</html>

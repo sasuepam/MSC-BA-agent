@@ -22,6 +22,10 @@ from msc_mcp_server.config import settings
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# HTML Parsing Helpers
+# ---------------------------------------------------------------------------
+
 class TableParser(HTMLParser):
     """Extracts all tables with their header rows and data rows."""
 
@@ -32,7 +36,7 @@ class TableParser(HTMLParser):
         self._current_row: list[str] = []
         self._current_cell: list[str] = []
         self._in_cell = False
-        self._depth = 0
+        self._depth = 0  # nesting depth for nested tables
 
     def handle_starttag(self, tag, attrs):
         if tag == "table":
@@ -57,6 +61,7 @@ class TableParser(HTMLParser):
             self._current_row = []
         elif tag in ("td", "th") and self._depth == 1:
             cell_text = " ".join(self._current_cell).strip()
+            # Clean up whitespace
             cell_text = re.sub(r'\s+', ' ', cell_text).strip()
             self._current_row.append(cell_text)
             self._current_cell = []
@@ -92,10 +97,11 @@ class SectionParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         if tag in ("h1", "h2"):
+            # Save previous section
             if self._current_header and self._current_content:
                 content = " ".join(self._current_content).strip()
                 content = re.sub(r'\s+', ' ', content)
-                self.sections[self._current_header] = content[:2000]
+                self.sections[self._current_header] = content[:2000]  # cap at 2K
             self._current_header = ""
             self._current_content = []
             self._header_text = []
@@ -120,6 +126,11 @@ class SectionParser(HTMLParser):
             self.sections[self._current_header] = content[:2000]
 
 
+# ---------------------------------------------------------------------------
+# Field Table Parsing
+# ---------------------------------------------------------------------------
+
+# Known column name variants for standard IA tables
 FIELD_COL_VARIANTS = {
     "name": ["field", "field name", "name", "parameter"],
     "location": ["location", "in", "type"],
@@ -139,12 +150,14 @@ def _match_col(header: str, col_key: str) -> bool:
 
 
 def _parse_field_table(table: dict) -> list[dict]:
+    """Parse a Request/Response field table into structured field objects."""
     headers = table.get("headers", [])
     rows = table.get("rows", [])
 
     if not headers:
         return []
 
+    # Map our standard field names to actual column headers
     col_map = {}
     for col_key in FIELD_COL_VARIANTS:
         for h in headers:
@@ -152,6 +165,7 @@ def _parse_field_table(table: dict) -> list[dict]:
                 col_map[col_key] = h
                 break
 
+    # Need at least "name" to be a field table
     if "name" not in col_map:
         return []
 
@@ -178,6 +192,7 @@ def _parse_field_table(table: dict) -> list[dict]:
 
 
 def _parse_error_table(table: dict) -> list[dict]:
+    """Parse an Error Scenarios table."""
     headers = table.get("headers", [])
     rows = table.get("rows", [])
 
@@ -186,6 +201,7 @@ def _parse_error_table(table: dict) -> list[dict]:
 
     errors = []
     for row in rows:
+        # Try to find number, description, http_status, notes
         values = list(row.values())
         if len(values) >= 2:
             error = {
@@ -201,6 +217,7 @@ def _parse_error_table(table: dict) -> list[dict]:
 
 
 def _parse_common_details(table: dict) -> dict:
+    """Parse Common Details table (Parameter → Value pairs)."""
     result = {}
     for row in table.get("rows", []):
         values = list(row.values())
@@ -217,9 +234,11 @@ def _parse_common_details(table: dict) -> dict:
 
 
 def _parse_environments(table: dict) -> dict:
+    """Parse Environment-Specific Details table."""
     result = {}
     headers = table.get("headers", [])
-
+    
+    # Find column indices for Chain1/Chain2/Prod
     chain1_col = next((h for h in headers if "chain 1" in h.lower() or "chain1" in h.lower() or "dev" in h.lower()), None)
     chain2_col = next((h for h in headers if "chain 2" in h.lower() or "chain2" in h.lower() or "test" in h.lower()), None)
     prod_col = next((h for h in headers if "prod" in h.lower() or "production" in h.lower()), None)
@@ -238,11 +257,17 @@ def _parse_environments(table: dict) -> dict:
     return result
 
 
+# ---------------------------------------------------------------------------
+# Section detection heuristics
+# ---------------------------------------------------------------------------
+
 def _is_field_table(table: dict, section_hint: str = "") -> bool:
+    """Check if this looks like a Request/Response field table."""
     headers = [h.lower() for h in table.get("headers", [])]
     if not headers:
         return False
     has_field_col = any("field" in h or "name" in h or "parameter" in h for h in headers)
+    has_req_col = any("required" in h or "mandatory" in h for h in headers)
     return has_field_col and len(table.get("rows", [])) > 0
 
 
@@ -260,21 +285,41 @@ def _is_common_details_table(table: dict) -> bool:
     rows = table.get("rows", [])
     if not rows:
         return False
+    # Check if rows contain "Method", "Path", "Scheme"
     all_text = " ".join(str(v) for row in rows for v in row.values()).lower()
     return "method" in all_text and "path" in all_text
 
 
+# ---------------------------------------------------------------------------
+# Main extraction function
+# ---------------------------------------------------------------------------
+
 def extract_ia_from_html(html: str, page_title: str = "") -> dict:
-    """Parse a Confluence IA page HTML and return structured data."""
+    """
+    Parse a Confluence IA page HTML and return structured data.
+    
+    Returns a dict with:
+    - basic_info: interface_id, method, path, scheme, page_name, sapi_path
+    - request_fields: list of field dicts
+    - response_fields: list of field dicts
+    - error_scenarios: list of error dicts
+    - environments: dict with hosts/port/url_path
+    - sections: dict of section_name → text content
+    - table_count: number of tables found
+    - field_count: total fields extracted
+    """
+    # Parse tables
     table_parser = TableParser()
     table_parser.feed(html)
     tables = table_parser.tables
 
+    # Parse sections
     section_parser = SectionParser()
     section_parser.feed(html)
     section_parser.finalize()
     sections = section_parser.sections
 
+    # Classify tables
     request_fields = []
     response_fields = []
     error_scenarios = []
@@ -282,11 +327,13 @@ def extract_ia_from_html(html: str, page_title: str = "") -> dict:
     common_details = {}
     unclassified_tables = []
 
+    # Try to classify based on section context
+    # Re-parse to find table positions relative to sections
     section_tables = _classify_tables_by_context(html, tables)
 
     for section_name, table in section_tables:
         sn = section_name.lower()
-        if "request" in sn and "response" not in sn:
+        if "request" in sn and not "response" in sn:
             fields = _parse_field_table(table)
             if fields:
                 request_fields.extend(fields)
@@ -311,6 +358,7 @@ def extract_ia_from_html(html: str, page_title: str = "") -> dict:
             if cd:
                 common_details.update(cd)
         else:
+            # Fallback: try to classify by table structure
             if _is_field_table(table):
                 unclassified_tables.append((section_name, table))
             elif _is_error_table(table):
@@ -324,18 +372,23 @@ def extract_ia_from_html(html: str, page_title: str = "") -> dict:
                 cd = _parse_common_details(table)
                 common_details.update(cd)
 
+    # If no classified fields, try unclassified field tables
     if not request_fields and not response_fields and unclassified_tables:
+        # First large field table → request, second → response
         field_tables = [(s, t) for s, t in unclassified_tables if _is_field_table(t)]
         if field_tables:
             request_fields = _parse_field_table(field_tables[0][1])
         if len(field_tables) > 1:
             response_fields = _parse_field_table(field_tables[1][1])
 
+    # Extract basic info from page title and common_details
     page_name = _extract_page_name(page_title)
     interface_id = _extract_interface_id(page_title)
     method = common_details.get("method", "")
     path = common_details.get("path", "")
     scheme = common_details.get("scheme", "HTTPS")
+
+    # Extract sapi_path from downstream systems mentioned in sections
     sapi_path = _extract_sapi_path(sections, request_fields)
 
     return {
@@ -364,17 +417,25 @@ def extract_ia_from_html(html: str, page_title: str = "") -> dict:
 
 
 def _classify_tables_by_context(html: str, tables: list) -> list[tuple[str, dict]]:
+    """
+    Match each table to its nearest preceding H1/H2 header.
+    Returns list of (section_name, table_dict) tuples.
+    """
+    # Build list of (position, type, content) for headers and tables
     events = []
 
+    # Find all H1/H2 headers with positions
     for match in re.finditer(r'<h[12][^>]*>(.*?)</h[12]>', html, re.DOTALL | re.IGNORECASE):
         header_text = re.sub('<[^>]+>', '', match.group(1)).strip()
         events.append((match.start(), 'header', header_text))
 
+    # Find all table starts
     table_starts = [m.start() for m in re.finditer(r'<table[^>]*>', html, re.IGNORECASE)]
 
     result = []
     current_section = "Unknown"
 
+    # Sort events and table positions together
     all_events = sorted(
         [(pos, 'header', content) for pos, _, content in events] +
         [(pos, 'table', i) for i, pos in enumerate(table_starts)],
@@ -393,8 +454,17 @@ def _classify_tables_by_context(html: str, tables: list) -> list[tuple[str, dict
 
 
 def _extract_page_name(title: str) -> str:
+    """Extract human-readable name from page title.
+    
+    Examples:
+    - 'INT004.4 - POST Cruise Prices' → 'Cruise Prices'
+    - 'v2.0 - POST Cruise Prices - INT004.4' → 'Cruise Prices'
+    - 'MUL004.4v2 POST Search Services' → 'Search Services'
+    """
     if not title:
         return ""
+    
+    # Remove common prefixes/suffixes
     t = title
     t = re.sub(r'INT\d+[\.\d]*\s*[-–]\s*', '', t)
     t = re.sub(r'MUL\d+[\.\d]+v?\d*\s*', '', t)
@@ -403,25 +473,33 @@ def _extract_page_name(title: str) -> str:
     t = re.sub(r'DRAFT', '', t, flags=re.IGNORECASE)
     t = re.sub(r'[-–]\s*INT\d+[\.\d]*', '', t)
     t = re.sub(r'\b(POST|GET|PUT|DELETE|PATCH)\b', '', t)
-    t = re.sub(r'/[a-zA-Z{}/\[\]]+', '', t)
+    t = re.sub(r'/[a-zA-Z{}/\[\]]+', '', t)  # remove URL paths
     t = re.sub(r'\s+', ' ', t).strip(' -–')
+    
     return t
 
 
 def _extract_interface_id(title: str) -> str:
+    """Extract INT id from title."""
     m = re.search(r'(INT[\d\.]+)', title, re.IGNORECASE)
     return m.group(1).upper() if m else ""
 
 
 def _extract_sapi_path(sections: dict, request_fields: list) -> str:
+    """Try to find the primary downstream/SAPI endpoint path."""
+    # Look in section text for downstream endpoint patterns
     all_text = " ".join(sections.values())
+    
+    # Look for patterns like POST /v1/transactions or POST /endpoint
     matches = re.findall(r'(?:POST|GET|PUT)\s+(/[a-zA-Z0-9/{}\[\]/_-]+)', all_text)
-
+    
+    # Filter out the main EAPI path and prefer payment/transaction endpoints
     priority_keywords = ['transaction', 'payment', 'transfer', 'process']
     for m in matches:
         if any(kw in m.lower() for kw in priority_keywords):
             return m
-
+    
+    # Return first downstream path that's not the main path
     main_path = ""
     for s_name, s_text in sections.items():
         if "common" in s_name.lower():
@@ -429,13 +507,17 @@ def _extract_sapi_path(sections: dict, request_fields: list) -> str:
             if pm:
                 main_path = pm.group(1)
                 break
-
+    
     for m in matches:
         if m != main_path and len(m) > 3:
             return m
-
+    
     return ""
 
+
+# ---------------------------------------------------------------------------
+# MCP Tool Registration
+# ---------------------------------------------------------------------------
 
 def register(mcp: FastMCP) -> None:
     """Register the IA extractor tool."""
@@ -445,15 +527,23 @@ def register(mcp: FastMCP) -> None:
         """Extract structured data from a Confluence IA/PAPI page.
 
         Instead of returning raw HTML, this tool deterministically parses
-        the page and returns a clean structured JSON with all request/response
-        fields, error scenarios, and environment details.
-
+        the page and returns a clean structured JSON with:
+        - All request fields (100% table coverage, no LLM truncation)
+        - All response fields
+        - Error scenarios
+        - Environment details
+        - Section text content
+        
+        Use this instead of confluence_get_page when reading IA/PAPI pages
+        to avoid LLM field extraction errors and hallucinations.
+        
         Args:
             page_id: Confluence page numeric ID
-            instance: 'main' for production, 'sandbox' for sandbox instance
+            instance: 'main' for msccruises.atlassian.net, 'sandbox' for mscsandbox
         """
         from msc_mcp_server.config import settings
 
+        # Select credentials based on instance
         if instance == "sandbox":
             base_url = settings.confluence_sandbox_url
             email = settings.confluence_sandbox_email

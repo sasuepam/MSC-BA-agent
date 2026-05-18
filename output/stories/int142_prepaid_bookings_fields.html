@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BA Stories – INT142 Prepaid Bookings: Excursions and Onboard Services Fields Added</title>
+</head>
+<body>
+
+<h1>BA Stories – INT142 Prepaid Bookings: Excursions and Onboard Services Fields Added</h1>
+
+<h2>Splitting Rationale</h2>
+<p>
+  This specification covers a single existing interface: <strong>INT142 (MyMSC Booking Details)</strong>.
+  All changes described — adding <code>longDescription</code> for both excursions and onboard services,
+  adding <code>duration</code> and <code>MinPaxRequired</code> for excursions, and adding the full
+  <code>ActivityMoreInfo</code> flag set for excursions — are field mapping enrichments to the same
+  INT142 API response. They share a single upstream source (the excursions API or onboard services API),
+  a single target response contract, and a single delivery context. Per the splitting rules, same-feature
+  changes to a single existing interface are grouped into one CR.
+</p>
+<p>
+  The fallback/resilience behaviour for retired excursions (TC-003 in the spec) is noted as
+  <strong>[TO BE CONFIRMED]</strong> pending UX and product alignment, and the expected fallback data
+  strategy is not yet defined. This scenario is out of MuleSoft scope for this CR and has not been
+  included in acceptance criteria.
+</p>
+<p>
+  <strong>ADF interfaces excluded:</strong> None referenced in this specification.
+</p>
+
+<hr>
+
+<h2>Change Requests</h2>
+
+<hr>
+
+<h3>CR-001</h3>
+
+<p><strong>Type:</strong> CR</p>
+
+<p><strong>Summary:</strong> INT142 Add Prepaid Item Fields for Excursions and Onboard Services</p>
+
+<h4>Description</h4>
+
+<p><strong>Change Scope:</strong></p>
+<p>
+  INT142 (MyMSC Booking Details) API response is to be enriched with the following new fields for
+  prepaid items. All mappings are from upstream provider APIs to the INT142 response payload.
+</p>
+
+<p><em>Applicable to all prepaid items (excursions and onboard services):</em></p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Source Field (Upstream Provider API)</th>
+    <th>Target Field (INT142 Response)</th>
+    <th>Type</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td>longDescription</td>
+    <td>longDescription</td>
+    <td>String</td>
+    <td>No conversion required. Source path within the onboard services item info object [TO BE CONFIRMED].</td>
+  </tr>
+</table>
+
+<p><em>Applicable to prepaid excursions only:</em></p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Source Field (Excursions API)</th>
+    <th>Target Field (INT142 Response)</th>
+    <th>Type</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td>duration</td>
+    <td>duration</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>Direct mapping. Unit and format (e.g. minutes, ISO 8601) [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>minimumPassengersRequired</td>
+    <td>MinPaxRequired</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>Direct mapping. Source and target data types [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>isBestSeller</td>
+    <td>ActivityMoreInfo.BestSeller</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isBusTransportAvailable</td>
+    <td>ActivityMoreInfo.Bus</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isInvolvesWalking</td>
+    <td>ActivityMoreInfo.ByFoot</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isCulturalActivity</td>
+    <td>ActivityMoreInfo.Cultural</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isDrinkIncluded</td>
+    <td>ActivityMoreInfo.Drink</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isFamilyFriendlyActivity</td>
+    <td>ActivityMoreInfo.ForFamily</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isMealIncluded</td>
+    <td>ActivityMoreInfo.Lunch</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isFilmingAllowed</td>
+    <td>ActivityMoreInfo.NoFilm</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean. Boolean inversion semantics (NoFilm = true may mean filming is NOT allowed, inverse of isFilmingAllowed = true) [TO BE CONFIRMED] with SA.</td>
+  </tr>
+  <tr>
+    <td>isGuideAvailable</td>
+    <td>ActivityMoreInfo.NoGuide</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean. Boolean inversion semantics (NoGuide = true may mean a guide is NOT available, inverse of isGuideAvailable = true) [TO BE CONFIRMED] with SA.</td>
+  </tr>
+  <tr>
+    <td>guideLanguageCodes</td>
+    <td>ActivityMoreInfo.GuideLang</td>
+    <td>Array of strings</td>
+    <td>Direct mapping as an array of language code strings. No boolean conversion. Source format (e.g. ISO 639-1) [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>isShoppingIncluded</td>
+    <td>ActivityMoreInfo.Shopping</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isSnackIncluded</td>
+    <td>ActivityMoreInfo.Snack</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isSwimmingIncluded</td>
+    <td>ActivityMoreInfo.Swim</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isTastingIncluded</td>
+    <td>ActivityMoreInfo.Tasting</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isTourActivity</td>
+    <td>ActivityMoreInfo.Tour</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isWalkingDifficulty</td>
+    <td>ActivityMoreInfo.WalkingDifficulty</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isWheelchairFriendly</td>
+    <td>ActivityMoreInfo.Wheelchair</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+  <tr>
+    <td>isLimitedSeats</td>
+    <td>ActivityMoreInfo.NbrMaxWaitList</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean. Target field name NbrMaxWaitList implies a numeric waitlist count — confirm with SA whether target type is boolean or numeric. [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>isBestRated</td>
+    <td>ActivityMoreInfo.BestRated</td>
+    <td>Boolean</td>
+    <td>Convert source value to boolean.</td>
+  </tr>
+</table>
+
+<p><strong>Rationale:</strong></p>
+<p>
+  Customers in the MyMSC private area who have prepaid excursions or onboard services can currently see
+  only limited information about those items. Adding <code>longDescription</code> across all prepaid
+  items, and adding <code>duration</code>, <code>MinPaxRequired</code>, and the full
+  <code>ActivityMoreInfo</code> flag set for excursions, provides customers with the detail they need
+  to review their purchases, plan their time at each port of call, and understand group size constraints
+  and activity characteristics before departure.
+</p>
+
+<h4>Resources</h4>
+<ul>
+  <li>Mule Specification Document: [TO BE CONFIRMED]</li>
+  <li>High Level Architecture Document: [TO BE CONFIRMED]</li>
+  <li>API Documentation (INT142 Interface Agreement): https://msccruises.atlassian.net/wiki/spaces/DTP/pages/3911614639 (access restricted)</li>
+  <li>Confluence Page: [TO BE CONFIRMED]</li>
+</ul>
+
+<h4>Acceptance Criteria (BDD)</h4>
+
+<p><strong>TC-001 – Happy Path: Booking with prepaid excursion and prepaid onboard service</strong></p>
+<pre>
+Given an authenticated customer has a booking containing at least one prepaid excursion
+  and at least one prepaid onboard service
+  and the upstream excursions API returns values for all new source fields
+  including a non-empty guideLanguageCodes array
+When the customer calls GET INT142 for that booking
+Then an HTTP 200 is returned
+And the prepaid excursion item in the response contains longDescription as a string
+And the prepaid excursion item contains duration with the agreed type and format
+And the prepaid excursion item contains MinPaxRequired with the agreed type
+And the prepaid excursion item contains an ActivityMoreInfo object
+And all ActivityMoreInfo flag fields (BestSeller, Bus, ByFoot, Cultural, Drink, ForFamily,
+  Lunch, NoFilm, NoGuide, Shopping, Snack, Swim, Tasting, Tour, WalkingDifficulty,
+  Wheelchair, NbrMaxWaitList, BestRated) are present and of boolean type
+And ActivityMoreInfo.GuideLang is an array of strings
+And the prepaid onboard service item contains longDescription as a string
+And the prepaid onboard service item does not contain duration, MinPaxRequired,
+  or ActivityMoreInfo
+</pre>
+
+<p><strong>TC-002 – Happy Path: Booking with prepaid onboard service only (no excursions)</strong></p>
+<pre>
+Given an authenticated customer has a booking containing at least one prepaid onboard service
+  and no prepaid excursions
+When the customer calls GET INT142 for that booking
+Then an HTTP 200 is returned
+And the prepaid onboard service item contains longDescription as a string
+And the prepaid onboard service item does not contain duration, MinPaxRequired,
+  or ActivityMoreInfo
+</pre>
+
+<p><strong>TC-003 – Alternative Path: Boolean inversion for NoFilm and NoGuide</strong></p>
+<pre>
+Given a prepaid excursion item where the upstream excursions API returns
+  known values for isFilmingAllowed and isGuideAvailable
+When the customer calls GET INT142 for that booking
+Then ActivityMoreInfo.NoFilm and ActivityMoreInfo.NoGuide reflect
+  the agreed inversion logic as confirmed by the SA
+And the expected boolean values for NoFilm and NoGuide are [TO BE CONFIRMED]
+  pending SA confirmation of inversion semantics
+</pre>
+
+<p><strong>TC-004 – Error Scenario: Unauthenticated request</strong></p>
+<pre>
+Given a request is made to INT142 without a valid authentication token
+  (no Authorization header, expired token, or invalid token)
+When the request is received by INT142
+Then an HTTP 401 Unauthorised is returned
+And no booking data is returned
+And authentication enforcement is not affected by the field mapping changes
+  introduced in this CR
+</pre>
+
+<hr>
+
+<h2>User Stories</h2>
+<p>No new interfaces are introduced in this specification. INT142 is an existing interface. No User Stories are generated for this initiative.</p>
+
+</body>
+</html>
