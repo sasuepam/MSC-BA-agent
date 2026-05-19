@@ -46,7 +46,7 @@ If the ticket cannot be found or returns an error, stop and report the error to 
 ## Step 3 — Read the matching story file
 
 Read the story file from:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\stories\<filename>.md`
+`C:\Users\[your_user]\MSC- Mule BA Agent\output\stories\<filename>.md`
 
 Locate the specific CR or User Story block that matches the Jira ticket based on summary or interface name.
 

@@ -1,4 +1,4 @@
-Read the validation report at `C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\validation\validation-report.md`.
+Read the validation report at `C:\Users\[your_user]\MSC- Mule BA Agent\output\validation\validation-report.md`.
 
 Work through every FLAG in the report one at a time, in severity order (BLOCKERs first, then WARNINGs, then INFOs).
 

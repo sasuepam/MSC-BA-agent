@@ -48,8 +48,8 @@ Always distinguish between what the MuleSoft team owns (the API contract and imp
 2. Identify: the overall solution being delivered, and the specific API(s) the MuleSoft team must build or change to support it.
 3. Extract: feature name, actors, business rules, solution use cases, API names/operations, and any known gaps.
 3. Derive a `feature_name` slug (lowercase, underscores, no spaces) from the feature title.
-4. Run `mkdir -p "C:/Users/Sarah_Suda/MSC- Mule BA Agent/output/specs"` to ensure the output directory exists.
-5. Write the completed spec to `C:/Users/Sarah_Suda/MSC- Mule BA Agent/output/specs/functional_spec_[feature_name].html`.
+4. Run `mkdir -p "C:/Users/[your_user]/MSC- Mule BA Agent/output/specs"` to ensure the output directory exists.
+5. Write the completed spec to `C:/Users/[your_user]/MSC- Mule BA Agent/output/specs/functional_spec_[feature_name].html`.
 6. Report the saved file path and a brief list of any fields marked TO BE CONFIRMED.
 
 ## Output format

@@ -10,15 +10,15 @@ Your job is to read generated functional spec and story files, apply a set of qu
 
 ## Project location
 
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent`
+`C:\Users\[your_user]\MSC- Mule BA Agent`
 
 ---
 
 ## Step 1 — Identify files to validate
 
 Check both output directories:
-- Spec files: `C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\specs\*.html`
-- Story files: `C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\stories\*.md`
+- Spec files: `C:\Users\[your_user]\MSC- Mule BA Agent\output\specs\*.html`
+- Story files: `C:\Users\[your_user]\MSC- Mule BA Agent\output\stories\*.md`
 
 If the user names specific files, validate only those. Otherwise validate all files found in both directories.
 
@@ -92,10 +92,10 @@ Severity levels:
 
 ## Step 4 — Save the report
 
-Ensure the output directory exists: `C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\validation\`
+Ensure the output directory exists: `C:\Users\[your_user]\MSC- Mule BA Agent\output\validation\`
 
 Save the report to:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\validation\validation-report.md`
+`C:\Users\[your_user]\MSC- Mule BA Agent\output\validation\validation-report.md`
 
 The report must follow this structure:
 

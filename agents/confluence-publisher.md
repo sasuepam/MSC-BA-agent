@@ -48,7 +48,7 @@ The user will provide a Confluence page URL or page ID.
 Extract the page ID from the URL (the numeric ID in `/pages/[ID]/`) or use it directly if given as a number.
 
 The user will identify the spec file, or default to the most recently modified `.html` file in:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\specs\`
+`C:\Users\[your_user]\MSC- Mule BA Agent\output\specs\`
 
 ---
 
@@ -71,7 +71,7 @@ Do not proceed until the lock is clear.
 ## Step 3 — Read the spec file
 
 Read the spec HTML file from:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\specs\<filename>.html`
+`C:\Users\[your_user]\MSC- Mule BA Agent\output\specs\<filename>.html`
 
 Extract the content for each BA-owned section (Reference Documentation, Feature Summary, Business Requirements, Use Cases, Non-Functional Requirements, Test Scenarios & Acceptance Criteria).
 
@@ -79,7 +79,9 @@ If the spec file cannot be found, stop and report to the user — do not attempt
 
 ---
 
-## Step 4 — Extract protected sections from the current page
+## Step 4 — Extract protected content from the current page
+
+### 4a — Protected sections (SA-owned)
 
 Parse the current page body HTML and extract the existing content for all four protected sections:
 - Solution Overview
@@ -88,6 +90,17 @@ Parse the current page body HTML and extract the existing content for all four p
 - Monitoring and Alerting Guidelines
 
 Store these exactly as they appear. They will be written back unchanged.
+
+### 4b — Confluence macros
+
+Scan the entire current page body for any Confluence macros (`<ac:structured-macro>`, `<ac:image>`, `<ac:link>`, `<ac:parameter>`, `<ac:rich-text-body>`, or any other `ac:` or `ri:` namespaced tags).
+
+**All macros found anywhere on the page must be preserved exactly as-is.** When rebuilding the page body:
+- Any macro that appears within a BA-owned section must be retained in its original position within that section
+- Any macro that appears within an SA-owned section is already preserved via 4a
+- Any macro that appears outside a named section (e.g. page-level TOC, info panels, status macros) must be preserved in its original position relative to surrounding content
+
+Do not attempt to convert, simplify, or replace any macro with plain HTML. Macros are live Confluence components and must be copied verbatim from the current page storage format.
 
 ---
 
@@ -100,7 +113,9 @@ Increment it by 1 for the new row.
 Build the new Document History row:
 - **VERSION:** previous highest version + 1
 - **AUTHOR(S):** Sarah Suda
-- **DATE:** today's date in DD/MMM/YYYY format
+- **DATE:** use the Confluence date macro — not plain text. Format the DATE cell as:
+  `<time datetime="YYYY-MM-DD" />`
+  where `YYYY-MM-DD` is today's date in ISO format (e.g. 19 May 2026 = `<time datetime="2026-05-19" />`).
 - **REMARKS:** a short summary of which BA sections were updated (e.g. "Updated: Feature Summary, Business Requirements, Use Cases")
 - **STATUS:** Draft
 - **TICKETS:** leave blank unless the user provides a ticket reference
@@ -110,6 +125,13 @@ Append this row to the existing Document History table. Do not modify any existi
 ---
 
 ## Step 6 — Assemble the updated page body
+
+### Hyperlink rule
+All URLs written into the page body — in Reference Documentation, Business Requirements, Use Cases, or any other section — must be rendered as clickable hyperlinks using Confluence storage format anchor tags:
+```xml
+<a href="URL">display text</a>
+```
+Never write a raw URL as plain text. If the spec HTML already contains `<a href="...">` tags, preserve them as-is. If a URL appears without a wrapping anchor tag, wrap it. Use the ticket key or document title as the display text where available (e.g. `<a href="https://smartship.atlassian.net/browse/MDTTPU-8133">MDTTPU-8133</a>`).
 
 Reconstruct the full page body in the correct template section order:
 
@@ -144,11 +166,24 @@ Only proceed after explicit confirmation.
 
 ## Step 8 — Update the page
 
-Call `confluence_update_page` with:
-- The page ID
-- The assembled full body HTML
-- **`status: draft`** — this must always be set to draft, never `current` or `published`
-- The incremented version number (current version + 1)
+Use the **Confluence v2 API** to save the page as a draft:
+
+```
+PUT /wiki/api/v2/pages/{id}
+{
+  "id": "{page_id}",
+  "status": "draft",
+  "title": "{page_title}",
+  "version": {"number": 1},
+  "body": {"storage": {"value": "{assembled_html}", "representation": "storage"}}
+}
+```
+
+Key points:
+- **Always use the v2 API** (`/wiki/api/v2/pages/{id}`) for saving drafts — the v1 API does not support drafts on published pages for this tenant
+- **`status` must always be `"draft"`** — never `"current"` or `"published"`
+- **`version.number` must always be `1`** for drafts — Confluence draft versioning is independent of the published version number
+- The published page remains untouched at its current version; the draft is stored separately
 
 ---
 

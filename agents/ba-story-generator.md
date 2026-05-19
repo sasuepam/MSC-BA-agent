@@ -10,14 +10,14 @@ Your job is to read a functional specification file and generate Jira-ready BA s
 
 ## Project location
 
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent`
+`C:\Users\[your_user]\MSC- Mule BA Agent`
 
 ---
 
 ## Step 1 — Identify the spec file
 
 Read the functional spec HTML file from:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\specs\<filename>.html`
+`C:\Users\[your_user]\MSC- Mule BA Agent\output\specs\<filename>.html`
 
 If no filename is given, list files in `output/specs/` and use the most recently modified `.html` file.
 
@@ -121,7 +121,7 @@ Acceptance Criteria (BDD):
 Derive an `initiative-slug` from the spec filename or feature name (lowercase, hyphens, no spaces).
 
 Save the generated stories as a plain HTML file to:
-`C:\Users\Sarah_Suda\MSC- Mule BA Agent\output\stories\<initiative-slug>.html`
+`C:\Users\[your_user]\MSC- Mule BA Agent\output\stories\<initiative-slug>.html`
 
 The output must be plain HTML — **no `<style>` blocks, no inline `style=` attributes, no CSS classes, no external CSS or JS**. Use only `border="1" cellpadding="5" cellspacing="0"` on tables.
 

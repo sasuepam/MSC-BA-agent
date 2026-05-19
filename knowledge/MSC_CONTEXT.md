@@ -7,7 +7,7 @@
 **Platform:** MuleSoft Anypoint + Confluence (msccruises.atlassian.net) + Jira (msccruises.atlassian.net)  
 **AI Platform:** Codemie (EPAM internal) / Claude Code  
 **Program:** DTTP — Digital Transformation Program  
-**Project location:** `C:\Users\Sarah_Suda\MSC- Mule BA Agent`  
+**Project location:** `C:\Users\[your_user]\MSC- Mule BA Agent`  
 
 ---
 
@@ -176,7 +176,7 @@ Orchestrated end-to-end via the `/ba-workflow` skill.
 
 ## MCP Server
 
-**Location:** `C:\Users\Sarah_Suda\MSC- Mule BA Agent\mcp\`  
+**Location:** `C:\Users\[your_user]\MSC- Mule BA Agent\mcp\`  
 **Start command:** `uv run msc-mcp-server` (run from the `mcp\` folder)  
 **Endpoint:** `http://localhost:8080/mcp`  
 **Credentials:** `mcp\.env` (see `docs\SETUP.md`)
