@@ -554,3 +554,38 @@ def register(mcp: FastMCP) -> None:
         if resp.status_code == 403:
             return {"error": "Permission denied"}
         return {"error": f"Confluence API error {resp.status_code}: {resp.text[:200]}"}
+
+    @mcp.tool()
+    async def confluence_get_author_info() -> dict:
+        """Return the configured author details for use in Document History rows.
+
+        Returns the Atlassian account ID (set via MSC_CONFLUENCE_AUTHOR_ACCOUNT_ID)
+        and the pre-built Confluence storage format snippets for the author mention
+        and the Draft status macro, ready to be inserted directly into page HTML.
+        """
+        account_id = settings.confluence_author_account_id
+
+        if account_id:
+            author_macro = (
+                f'<ac:link><ri:user ri:account-id="{account_id}" /></ac:link>'
+                ' Co-authored by MSC BA Agent'
+            )
+        else:
+            author_macro = "Sarah Suda, Co-authored by MSC BA Agent"
+
+        status_macro = (
+            '<ac:structured-macro ac:name="status" ac:schema-version="1">'
+            '<ac:parameter ac:name="colour">Blue</ac:parameter>'
+            '<ac:parameter ac:name="title">Draft</ac:parameter>'
+            '</ac:structured-macro>'
+        )
+
+        return {
+            "account_id": account_id,
+            "author_cell_html": author_macro,
+            "status_cell_html": status_macro,
+            "note": (
+                "account_id is blank — falling back to plain text author name. "
+                "Set MSC_CONFLUENCE_AUTHOR_ACCOUNT_ID in .env to enable the @mention macro."
+            ) if not account_id else "OK",
+        }

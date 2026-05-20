@@ -35,6 +35,7 @@ class ServerSettings(BaseSettings):
     confluence_url: str = ""
     confluence_email: str = ""
     confluence_token: str = ""
+    confluence_author_account_id: str = ""  # Atlassian account ID for user mention macro (e.g. 557058:xxxxxxxx-...)
 
     # Confluence — Sandbox (for writing/testing)
     confluence_sandbox_url: str = ""
