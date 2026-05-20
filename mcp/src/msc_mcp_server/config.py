@@ -29,6 +29,7 @@ class ServerSettings(BaseSettings):
     jira_url: str = ""
     jira_token: str = ""
     jira_email: str = ""
+    jira_ac_field: str = ""  # Custom field ID for Acceptance Criteria (e.g. customfield_10016)
 
     # Confluence — Production (read-only recommended)
     confluence_url: str = ""

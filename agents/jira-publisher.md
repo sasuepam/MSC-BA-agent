@@ -60,33 +60,42 @@ If the story file or the matching story block cannot be found, stop and report c
 
 ## Step 4 — Format the update payload
 
-Format the description as clean plain text structured for Jira, preserving all content from the story file. Use the following layout:
+Format the description using the structured plain text layout below. Use `## ` prefix for all section headings (renders as H2 in Jira) and `- ` prefix for all list items (renders as bullets).
 
 **For a User Story:**
 ```
-User Story Statement:
+## User Story Statement
 As a [persona] I want [goal] so that [benefit]
 
-Interface Name: [interface name]
-Purpose: [purpose]
-Users: [users/consuming systems]
+## Interface Name
+[interface name]
 
-Use Cases:
+## Purpose
+[purpose]
+
+## Users
+[users/consuming systems]
+
+## Use Cases
+- [use case]
 - [use case]
 
-Functionality:
-  Authentication: [auth method]
+## Functionality
 
-  Happy Path:
-  [steps]
+## Authentication
+[auth method]
 
-  Alternative Paths:
-  - [alternative]
+## Happy Path
+- [step]
+- [step]
 
-  Error Scenarios:
-  - [error scenario]
+## Alternative Paths
+- [alternative]
 
-Documentation:
+## Error Scenarios
+- [error scenario]
+
+## Documentation
 - Mule Specification Document: [link or blank]
 - High Level Architecture Document: [link or blank]
 - API Documentation: [link or blank]
@@ -95,20 +104,20 @@ Documentation:
 
 **For a CR:**
 ```
-Change Scope:
+## Change Scope
 [change scope detail]
 
-Rationale:
+## Rationale
 [rationale]
 
-Resources:
+## Resources
 - Mule Specification Document: [link or blank]
 - High Level Architecture Document: [link or blank]
 - API Documentation: [link or blank]
 - Confluence Page: [link or blank]
 ```
 
-Format the acceptance criteria as a separate block of BDD Given/When/Then statements, one scenario per block, clearly separated.
+Format the acceptance criteria as a separate block of BDD Given/When/Then statements, one scenario per block, clearly separated. This content goes in the `acceptance_criteria` parameter — **not** in the description.
 
 ---
 
@@ -128,11 +137,11 @@ Only proceed after explicit confirmation.
 ## Step 6 — Update the ticket
 
 Call `jira_update_issue` with:
-- The ticket key
-- The formatted description
-- The formatted acceptance criteria (in the appropriate Jira field)
+- `issue_key`: the ticket key
+- `description`: the formatted description (with `## ` headings and `- ` bullets)
+- `acceptance_criteria`: the BDD Given/When/Then block (separate from description)
 
-Update **only** these two fields. Do not touch any other field.
+Update **only** these two fields. Do not pass `summary`, `labels`, `assignee_email`, or `status_transition`.
 
 ---
 

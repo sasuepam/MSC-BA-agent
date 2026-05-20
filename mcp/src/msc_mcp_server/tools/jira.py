@@ -43,6 +43,67 @@ def _default_headers() -> dict:
     }
 
 
+def _text_to_adf(text: str) -> dict:
+    """Convert structured plain text to Atlassian Document Format (ADF).
+
+    Supports:
+      ## Heading text   → ADF heading level 2
+      - Bullet item     → ADF bulletList item
+      Plain text        → ADF paragraph
+    Blank lines flush any buffered paragraph or bullet list.
+    """
+    if not text:
+        return {"type": "doc", "version": 1, "content": []}
+
+    content: list = []
+    bullet_buffer: list = []
+    para_buffer: list = []
+
+    def flush_para() -> None:
+        if para_buffer:
+            content.append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": " ".join(para_buffer)}],
+            })
+            para_buffer.clear()
+
+    def flush_bullets() -> None:
+        if bullet_buffer:
+            content.append({"type": "bulletList", "content": list(bullet_buffer)})
+            bullet_buffer.clear()
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            flush_para()
+            flush_bullets()
+        elif stripped.startswith("## "):
+            flush_para()
+            flush_bullets()
+            content.append({
+                "type": "heading",
+                "attrs": {"level": 2},
+                "content": [{"type": "text", "text": stripped[3:].strip()}],
+            })
+        elif stripped.startswith("- "):
+            flush_para()
+            bullet_buffer.append({
+                "type": "listItem",
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": stripped[2:].strip()}],
+                }],
+            })
+        else:
+            flush_bullets()
+            para_buffer.append(stripped)
+
+    flush_para()
+    flush_bullets()
+
+    return {"type": "doc", "version": 1, "content": content}
+
+
 def register(mcp: FastMCP) -> None:
     """Register Jira tools on the MCP server instance."""
 
@@ -249,19 +310,26 @@ def register(mcp: FastMCP) -> None:
         issue_key: str,
         summary: str = "",
         description: str = "",
+        acceptance_criteria: str = "",
         status_transition: str = "",
         assignee_email: str = "",
         labels: list[str] | None = None,
     ) -> dict:
         """Update an existing Jira issue.
 
-        Can update summary, description, assignee, labels.
+        Can update summary, description, acceptance criteria, assignee, labels.
         To change status use status_transition (e.g. "In Progress", "Done").
+
+        Description and acceptance_criteria support structured plain text:
+          ## Section heading  → renders as H2
+          - Bullet item       → renders as a bullet list item
 
         Args:
             issue_key: Issue key like DTTP25-123.
             summary: New summary (leave empty to keep current).
             description: New description text (leave empty to keep current).
+            acceptance_criteria: Acceptance criteria text (leave empty to keep current).
+                Stored in the custom field configured via MSC_JIRA_AC_FIELD.
             status_transition: Transition name to move issue to (e.g. "In Progress", "Done", "To Do").
             assignee_email: New assignee email (leave empty to keep current).
             labels: New labels list (replaces existing labels).
@@ -276,13 +344,17 @@ def register(mcp: FastMCP) -> None:
             updates["summary"] = [{"set": summary}]
 
         if description:
-            updates["description"] = [{
-                "set": {
-                    "type": "doc",
-                    "version": 1,
-                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}],
-                }
-            }]
+            updates["description"] = [{"set": _text_to_adf(description)}]
+
+        if acceptance_criteria:
+            ac_field = settings.jira_ac_field
+            if ac_field:
+                updates[ac_field] = [{"set": _text_to_adf(acceptance_criteria)}]
+            else:
+                # No AC field configured — append AC block to description
+                ac_suffix = "\n\n## Acceptance Criteria\n" + acceptance_criteria
+                combined = (description + ac_suffix) if description else ac_suffix
+                updates["description"] = [{"set": _text_to_adf(combined)}]
 
         if labels is not None:
             updates["labels"] = [{"set": labels}]
