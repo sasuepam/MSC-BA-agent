@@ -73,7 +73,7 @@ Description:
   Change Scope: [specific technical detail — which endpoint, field, method, or behaviour is changing]
   Rationale: [business reason — what problem this solves or value it delivers]
   Resources:
-    - Mule Specification Document: [link if available in spec, otherwise leave blank]
+    - MuleSoft Requirements Page: [link if available in spec, otherwise leave blank]
     - High Level Architecture Document: [link if available in spec, otherwise leave blank]
     - API Documentation: [link if available in spec, otherwise leave blank]
     - Confluence Page: [link if available in spec, otherwise leave blank]
@@ -103,7 +103,7 @@ Functionality:
   Error Scenarios:
     - [error case and expected system behaviour]
 Documentation:
-  - Mule Specification Document: [link if available, otherwise leave blank]
+  - MuleSoft Requirements Page: [link if available, otherwise leave blank]
   - High Level Architecture Document: [link if available, otherwise leave blank]
   - API Documentation: [link if available, otherwise leave blank]
   - Specs: [link if available, otherwise leave blank]
@@ -153,15 +153,16 @@ Structure the HTML file as follows:
   <tr><td>Summary</td><td>[Jira-style title, max 10 words]</td></tr>
   <tr><td>Change Scope</td><td>[specific technical detail]</td></tr>
   <tr><td>Rationale</td><td>[business reason]</td></tr>
-  <tr><td>Mule Specification Document</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>MuleSoft Requirements Page</td><td>[link or TO BE CONFIRMED]</td></tr>
   <tr><td>High Level Architecture Document</td><td>[link or TO BE CONFIRMED]</td></tr>
   <tr><td>API Documentation</td><td>[link or TO BE CONFIRMED]</td></tr>
   <tr><td>Confluence Page</td><td>[link or TO BE CONFIRMED]</td></tr>
 </table>
 <h3>Acceptance Criteria</h3>
 <table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Given</th><th>When</th><th>Then</th></tr>
-  <tr><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
+  <tr><th>Scenario</th><th>Given</th><th>When</th><th>Then</th></tr>
+  <tr><td><strong>Scenario 1: [scenario name]</strong></td><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
+  <!-- Add a row per scenario; duplicate the row above for each additional scenario -->
 </table>
 
 <!-- Repeat the block below for each User Story -->
@@ -178,15 +179,16 @@ Structure the HTML file as follows:
   <tr><td>Happy Path</td><td>[step-by-step main success flow]</td></tr>
   <tr><td>Alternative Paths</td><td>[alternative scenarios]</td></tr>
   <tr><td>Error Scenarios</td><td>[error cases and expected behaviour]</td></tr>
-  <tr><td>Mule Specification Document</td><td>[link or TO BE CONFIRMED]</td></tr>
+  <tr><td>MuleSoft Requirements Page</td><td>[link or TO BE CONFIRMED]</td></tr>
   <tr><td>High Level Architecture Document</td><td>[link or TO BE CONFIRMED]</td></tr>
   <tr><td>API Documentation</td><td>[link or TO BE CONFIRMED]</td></tr>
   <tr><td>Confluence Page</td><td>[link or TO BE CONFIRMED]</td></tr>
 </table>
 <h3>Acceptance Criteria</h3>
 <table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Given</th><th>When</th><th>Then</th></tr>
-  <tr><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
+  <tr><th>Scenario</th><th>Given</th><th>When</th><th>Then</th></tr>
+  <tr><td><strong>Scenario 1: [scenario name]</strong></td><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
+  <!-- Add a row per scenario; duplicate the row above for each additional scenario -->
 </table>
 
 </body>

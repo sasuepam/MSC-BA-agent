@@ -60,7 +60,7 @@ If the story file or the matching story block cannot be found, stop and report c
 
 ## Step 4 — Format the update payload
 
-Format the description using the structured plain text layout below. Use `## ` prefix for all section headings (renders as H2 in Jira) and `- ` prefix for all list items (renders as bullets).
+Always use the CR and User Story templates exactly as defined in the `ba-story-generator` agent. Do not add, remove, or reorder fields. Format the description using the structured plain text layout below. Use `## ` prefix for all section headings (renders as H2 in Jira) and `- ` prefix for all list items (renders as bullets).
 
 **For a User Story:**
 ```
@@ -96,7 +96,7 @@ As a [persona] I want [goal] so that [benefit]
 - [error scenario]
 
 ## Documentation
-- Mule Specification Document: [link or blank]
+- MuleSoft Requirements Page: [link or blank]
 - High Level Architecture Document: [link or blank]
 - API Documentation: [link or blank]
 - Specs: [link or blank]
@@ -111,13 +111,26 @@ As a [persona] I want [goal] so that [benefit]
 [rationale]
 
 ## Resources
-- Mule Specification Document: [link or blank]
+- MuleSoft Requirements Page: [link or blank]
 - High Level Architecture Document: [link or blank]
 - API Documentation: [link or blank]
 - Confluence Page: [link or blank]
 ```
 
-Format the acceptance criteria as a separate block of BDD Given/When/Then statements, one scenario per block, clearly separated. This content goes in the `acceptance_criteria` parameter — **not** in the description.
+Format the acceptance criteria as a separate block of BDD Given/When/Then statements. Each scenario must open with a **bold heading** on its own line (e.g. `**Scenario 1: [scenario name]**`), followed by its Given / When / Then lines. Separate each scenario with a blank line. This content goes in the `acceptance_criteria` parameter — **not** in the description.
+
+Example AC format:
+```
+**Scenario 1: [scenario name]**
+Given [precondition]
+When [action]
+Then [expected outcome]
+
+**Scenario 2: [scenario name]**
+Given [precondition]
+When [action]
+Then [expected outcome]
+```
 
 ---
 
