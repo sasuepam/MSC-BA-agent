@@ -4,6 +4,9 @@ A complete walkthrough for getting the MSC Mule BA Agent running on a new machin
 
 **Estimated time:** 15–20 minutes
 
+> ⚠️ **Important — use `codemie-claude`, not `claude`**
+> This project runs on **Codemie**, EPAM's private, client-safe deployment of Claude Code. Always use the `codemie-claude` command to launch it. Do **not** use the standard `claude` CLI — that routes to Anthropic's public service and must not be used with client data. Every command in this guide uses `codemie-claude`.
+
 ---
 
 ## Contents
@@ -47,11 +50,10 @@ pip install uv
   ```
 - **Verify:** `uv --version`
 
-### Claude Code
-The AI coding assistant that runs the BA agents.
-- Download and install from https://claude.ai/code
-- Follow the Claude Code installer for your operating system
-- **Verify:** `claude --version` or `codemie-claude --version`
+### Codemie (Claude Code)
+The AI coding assistant that runs the BA agents. This project uses **Codemie** — EPAM's private, client-safe deployment of Claude Code. Do not use the standard `claude` CLI.
+- Install Codemie by following your team's internal Codemie onboarding instructions
+- **Verify:** `codemie-claude --version`
 
 ### Atlassian API token
 Required to connect to Jira and Confluence. You will need it during the `/setup` wizard in Step 4.
@@ -103,7 +105,7 @@ MSC-BA-agent/
 
 ## 3. Launch Claude Code
 
-Open Claude Code **from the project root** — this is important. The agents, skills, and `CLAUDE.md` conventions only load when Claude Code is started from this folder.
+Open Codemie **from the project root** — this is important. The agents, skills, and `CLAUDE.md` conventions only load when Codemie is started from this folder.
 
 ```bash
 cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
@@ -113,10 +115,10 @@ codemie-claude
 > **Mac/Linux:**
 > ```bash
 > cd ~/Documents/MSC-BA-agent
-> claude
+> codemie-claude
 > ```
 
-Claude Code opens in your terminal. You are now ready to run the setup wizard.
+Codemie opens in your terminal. You are now ready to run the setup wizard.
 
 ---
 
@@ -157,11 +159,11 @@ Runs `uv sync` inside `mcp/` to install all required packages. Reports: `✅ Dep
 **Step 6 — Prompts you to start the MCP server**
 Gives you the exact command to run in a second terminal (see [Step 5 below](#5-start-the-mcp-server)) and waits for you to confirm it is running before continuing.
 
-**Step 7 — Registers the MCP server with Claude Code**
-Runs `claude mcp add` to connect Claude Code to the local MCP server. If automatic registration fails, it gives you the manual fallback (see [Manual configuration reference](#8-manual-configuration-reference)).
+**Step 7 — Registers the MCP server with Codemie**
+Runs `codemie-claude mcp add` to connect Codemie to the local MCP server. If automatic registration fails, it gives you the manual fallback (see [Manual configuration reference](#8-manual-configuration-reference)).
 
-**Step 8 — Prompts you to restart Claude Code**
-The MCP connection only takes effect after a restart. The wizard tells you how to restart (Ctrl+R on desktop, `/exit` then relaunch in terminal) and reminds you to run `/setup verify` afterwards.
+**Step 8 — Prompts you to restart Codemie**
+The MCP connection only takes effect after a restart. The wizard tells you how to restart (`/exit` then relaunch with `codemie-claude`) and reminds you to run `/setup verify` afterwards.
 
 > **Re-running /setup**
 > You can run `/setup` again at any time to update credentials, change the port, or add a new integration. It detects the existing `.env` and asks before overwriting.
@@ -202,11 +204,11 @@ Once you see this, go back to the `/setup` wizard in your Claude Code terminal a
 
 ## 6. Restart Claude Code and verify
 
-After the `/setup` wizard completes, restart Claude Code so the MCP server connection takes effect:
+After the `/setup` wizard completes, restart Codemie so the MCP server connection takes effect:
 
-- **Terminal (CLI):** type `/exit`, then relaunch with `codemie-claude` or `claude` from the project root
+- **Terminal (CLI):** type `/exit`, then relaunch with `codemie-claude` from the project root
 - **Desktop app:** press `Ctrl+R` (Windows/Linux) or `Cmd+R` (Mac)
-- **VS Code extension:** open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run `Claude: Restart`
+- **VS Code extension:** open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run `Codemie: Restart`
 
 Once restarted, run the verification command:
 
@@ -231,6 +233,8 @@ The verify mode will:
 If the MCP server is not reachable, check that the server terminal (Step 5) is still running and has not errored.
 
 Once `/setup verify` passes, you are fully set up. Type `/ba-workflow` to start.
+
+> **Reminder:** always launch Codemie using `codemie-claude`, not `claude`. See the note at the top of this guide.
 
 ---
 
@@ -296,10 +300,10 @@ cd mcp
 uv sync
 ```
 
-### Manually register the MCP server with Claude Code
+### Manually register the MCP server with Codemie
 
 ```bash
-claude mcp add msc-ba --transport http http://localhost:8080/mcp
+codemie-claude mcp add msc-ba --transport http http://localhost:8080/mcp
 ```
 
 Or add it directly to `~/.claude/settings.json` (Windows: `C:\Users\[your_user]\.claude\settings.json`):
@@ -314,7 +318,7 @@ Or add it directly to `~/.claude/settings.json` (Windows: `C:\Users\[your_user]\
 }
 ```
 
-Verify it was added: `claude mcp list`
+Verify it was added: `codemie-claude mcp list`
 
 ---
 
@@ -356,8 +360,8 @@ uv python install 3.12
 ### MCP server starts but `/setup verify` says tools are not available
 
 1. Confirm the server terminal shows `Application startup complete.`
-2. Confirm MCP registration: `claude mcp list` — check `msc-ba` is listed at `http://localhost:8080/mcp`
-3. Restart Claude Code — the MCP connection only activates after a restart
+2. Confirm MCP registration: `codemie-claude mcp list` — check `msc-ba` is listed at `http://localhost:8080/mcp`
+3. Restart Codemie (`/exit` then `codemie-claude`) — the MCP connection only activates after a restart
 4. If you changed the port in `.env`, update the registered URL to match (re-run `/setup` or edit `settings.json` manually)
 
 ---
@@ -376,7 +380,7 @@ Also confirm that your email in `mcp/.env` exactly matches the Atlassian account
 
 ### `/setup` or `/ba-workflow` is not recognised
 
-Claude Code must be launched from the project root — the folder containing `CLAUDE.md` and the `agents/` directory. If you launched from a different folder, the custom commands will not load.
+Codemie must be launched from the project root — the folder containing `CLAUDE.md` and the `agents/` directory. If you launched from a different folder, the custom commands will not load. Also confirm you are using `codemie-claude`, not the standard `claude` CLI.
 
 ```bash
 cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
