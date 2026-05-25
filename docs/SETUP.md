@@ -10,14 +10,13 @@ A complete walkthrough for getting the MSC Mule BA Agent running on a new machin
 
 1. [Prerequisites](#1-prerequisites)
 2. [Clone the repository](#2-clone-the-repository)
-3. [Install Python dependencies](#3-install-python-dependencies)
-4. [Configure your credentials](#4-configure-your-credentials)
-5. [Configure Claude Code](#5-configure-claude-code)
-6. [Register the MCP server with Claude Code](#6-register-the-mcp-server-with-claude-code)
-7. [Start the MCP server](#7-start-the-mcp-server)
-8. [Verify everything works](#8-verify-everything-works)
-9. [Your daily workflow](#9-your-daily-workflow)
-10. [Troubleshooting](#10-troubleshooting)
+3. [Launch Claude Code](#3-launch-claude-code)
+4. [Run /setup — interactive configuration wizard](#4-run-setup--interactive-configuration-wizard)
+5. [Start the MCP server](#5-start-the-mcp-server)
+6. [Restart Claude Code and verify](#6-restart-claude-code-and-verify)
+7. [Your daily workflow](#7-your-daily-workflow)
+8. [Manual configuration reference](#8-manual-configuration-reference)
+9. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -51,180 +50,129 @@ pip install uv
 ### Claude Code
 The AI coding assistant that runs the BA agents.
 - Download and install from https://claude.ai/code
-- Follow the Claude Code installer instructions for your operating system
+- Follow the Claude Code installer for your operating system
 - **Verify:** `claude --version` or `codemie-claude --version`
 
 ### Atlassian API token
-Required to connect to Jira and Confluence. You will need this in Step 4.
+Required to connect to Jira and Confluence. You will need it during the `/setup` wizard in Step 4.
 - Go to https://id.atlassian.com/manage/api-tokens
-- Click **Create API token**
-- Give it a label (e.g. `MSC BA Agent`) and copy the token — you will not be able to see it again
+- Click **Create API token**, give it a label (e.g. `MSC BA Agent`), and copy the token
+- One token covers both Jira and Confluence — keep it somewhere safe, you cannot view it again after closing the page
 
 ---
 
 ## 2. Clone the repository
 
-Open a terminal and clone the repository to your machine.
+Open a terminal and clone the repository:
 
 ```bash
 git clone https://github.com/sasuepam/MSC-BA-agent.git
 ```
 
-This creates a folder called `MSC-BA-agent` in your current directory. Navigate into the project:
+This creates a folder called `MSC-BA-agent`. Navigate into it:
 
 ```bash
 cd MSC-BA-agent
 ```
 
-> **Windows users:** If you prefer a specific location (e.g. your Documents folder), navigate there first:
+> **Windows — choosing a location:**
 > ```bash
 > cd "C:\Users\[your_user]\Documents"
 > git clone https://github.com/sasuepam/MSC-BA-agent.git
 > cd MSC-BA-agent
 > ```
 
-Your project root should now contain:
+Your project root should contain:
 ```
 MSC-BA-agent/
 ├── agents/
+├── .claude/
+│   └── commands/
+│       ├── ba-workflow.md
+│       ├── ba-amend.md
+│       └── setup.md          ← the /setup wizard lives here
 ├── docs/
 ├── knowledge/
 ├── mcp/
 ├── output/
-├── .claude/
 ├── CLAUDE.md
 └── README.md
 ```
 
 ---
 
-## 3. Install Python dependencies
+## 3. Launch Claude Code
 
-The MCP server (which connects Claude to Jira and Confluence) has its own Python dependencies. Install them with:
-
-```bash
-cd mcp
-uv sync
-```
-
-`uv sync` reads `pyproject.toml` and installs all required packages into an isolated virtual environment inside the `mcp/` folder. You do not need to activate the environment manually — `uv run` handles that automatically.
-
-**Expected output:**
-```
-Resolved X packages
-Installed X packages
-```
-
-If you see errors, check that Python 3.12+ is installed and accessible on your PATH.
-
----
-
-## 4. Configure your credentials
-
-The MCP server needs your Atlassian credentials to talk to Jira and Confluence. These are stored in a local `.env` file that is never committed to Git.
-
-From inside the `mcp/` folder (you should already be there from Step 3):
+Open Claude Code **from the project root** — this is important. The agents, skills, and `CLAUDE.md` conventions only load when Claude Code is started from this folder.
 
 ```bash
-cp .env.example .env
+cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
+codemie-claude
 ```
 
-> **Windows (Command Prompt):**
+> **Mac/Linux:**
 > ```bash
-> copy .env.example .env
+> cd ~/Documents/MSC-BA-agent
+> claude
 > ```
 
-Open `mcp/.env` in any text editor and fill in your values:
-
-```
-# --- Server (leave as-is unless port 8080 is already in use) ---
-MSC_HOST=0.0.0.0
-MSC_PORT=8080
-MSC_TRANSPORT=sse
-MSC_DEBUG=false
-MSC_SERVER_NAME=msc-mcp-server
-
-# --- Jira ---
-MSC_JIRA_URL=https://msccruises.atlassian.net
-MSC_JIRA_EMAIL=your.name@msccruises.com
-MSC_JIRA_TOKEN=your-api-token-here
-
-# --- Confluence ---
-MSC_CONFLUENCE_URL=https://msccruises.atlassian.net
-MSC_CONFLUENCE_EMAIL=your.name@msccruises.com
-MSC_CONFLUENCE_TOKEN=your-api-token-here
-```
-
-**Notes:**
-- `MSC_JIRA_TOKEN` and `MSC_CONFLUENCE_TOKEN` are both set to the **same Atlassian API token** you generated in Step 1 — one token covers both products
-- `MSC_JIRA_URL` and `MSC_CONFLUENCE_URL` are both your Atlassian domain (no `/wiki` or `/jira` suffix needed)
-- The remaining variables (`MSC_ANYPOINT_*`, `MSC_GIT_*`, `MSC_MS_*`) are for optional integrations — leave them blank unless you are setting those up
-- **Never commit `.env`** — it is already listed in `.gitignore`
+Claude Code opens in your terminal. You are now ready to run the setup wizard.
 
 ---
 
-## 5. Configure Claude Code
+## 4. Run /setup — interactive configuration wizard
 
-Claude Code needs to know where the project lives and which custom instructions to load.
+The `/setup` command is a built-in wizard that guides you through the entire configuration in one go. Once Claude Code is open, type:
 
-Navigate back to the project root (one level up from `mcp/`):
-
-```bash
-cd ..
+```
+/setup
 ```
 
-You should now be in the `MSC-BA-agent/` root directory.
+The wizard will walk you through the following steps automatically:
 
-Claude Code automatically reads `CLAUDE.md` from the project root when you launch it from this folder. This file contains all the MSC BA conventions, pipeline instructions, and agent definitions. **No manual configuration of CLAUDE.md is needed.**
+### What /setup does
 
-The `.claude/` folder contains the custom skills (`/ba-workflow`, `/ba-amend`) and project-level settings. These are already configured in the repository.
+**Step 1 — Checks prerequisites**
+Verifies that Python and uv are installed and accessible. Reports the version found or tells you exactly what to install if something is missing.
+
+**Step 2 — Checks for an existing .env file**
+If a `mcp/.env` already exists, it asks whether you want to re-configure. Useful if you need to update a token or add a new integration.
+
+**Step 3 — Collects your credentials interactively, one question at a time**
+
+It asks for:
+- Confluence URL (e.g. `https://msccruises.atlassian.net`)
+- Confluence email address
+- Confluence API token (paste the one you generated in Step 1)
+- Whether you have a Confluence sandbox space (optional — used for draft review before going live)
+- Whether you use Jira integration, and if so your Jira URL, email, and token (usually the same as Confluence)
+- Which port to use for the MCP server (default: `8080`, press Enter to accept)
+
+**Step 4 — Writes `mcp/.env`**
+Creates the credentials file from your answers. Reports: `✅ Credentials saved to mcp/.env`
+
+**Step 5 — Installs Python dependencies**
+Runs `uv sync` inside `mcp/` to install all required packages. Reports: `✅ Dependencies installed`
+
+**Step 6 — Prompts you to start the MCP server**
+Gives you the exact command to run in a second terminal (see [Step 5 below](#5-start-the-mcp-server)) and waits for you to confirm it is running before continuing.
+
+**Step 7 — Registers the MCP server with Claude Code**
+Runs `claude mcp add` to connect Claude Code to the local MCP server. If automatic registration fails, it gives you the manual fallback (see [Manual configuration reference](#8-manual-configuration-reference)).
+
+**Step 8 — Prompts you to restart Claude Code**
+The MCP connection only takes effect after a restart. The wizard tells you how to restart (Ctrl+R on desktop, `/exit` then relaunch in terminal) and reminds you to run `/setup verify` afterwards.
+
+> **Re-running /setup**
+> You can run `/setup` again at any time to update credentials, change the port, or add a new integration. It detects the existing `.env` and asks before overwriting.
 
 ---
 
-## 6. Register the MCP server with Claude Code
+## 5. Start the MCP server
 
-Claude Code needs to know the address of the local MCP server so it can call the Jira and Confluence tools.
+The `/setup` wizard will prompt you to do this at the right moment (Step 6 of the wizard), but here is the command for reference.
 
-Run this **once** from any terminal:
-
-```bash
-claude mcp add msc-ba --transport http http://localhost:8080/mcp
-```
-
-This adds the MCP server to your **global** Claude Code settings so it is available in all projects.
-
-**To verify it was added:**
-```bash
-claude mcp list
-```
-
-You should see `msc-ba` listed with the URL `http://localhost:8080/mcp`.
-
-**Alternative — add it manually:**
-
-If the `claude mcp add` command is not available, open your Claude Code settings file:
-- **Windows:** `C:\Users\[your_user]\.claude\settings.json`
-- **Mac/Linux:** `~/.claude/settings.json`
-
-Add the following (create the file if it does not exist):
-
-```json
-{
-  "mcpServers": {
-    "msc-ba": {
-      "url": "http://localhost:8080/mcp"
-    }
-  }
-}
-```
-
----
-
-## 7. Start the MCP server
-
-The MCP server must be running whenever you use the BA agents. It is what allows Claude to read Confluence pages, fetch Jira tickets, and push updates.
-
-Open a **dedicated terminal** for the server (keep it open throughout your session):
+Open a **dedicated second terminal** and keep it running throughout your session:
 
 ```bash
 cd "C:\Users\[your_user]\Documents\MSC-BA-agent\mcp"
@@ -243,57 +191,52 @@ Starting MSC MCP Server on 0.0.0.0:8080 (transport=streamable-http)
 Application startup complete.
 ```
 
-**Do not close this terminal.** The server runs in the foreground. If you close it, the Jira and Confluence tools will stop working until you restart it.
+Once you see this, go back to the `/setup` wizard in your Claude Code terminal and type `ready` to continue.
 
-> **Port already in use?** If you see an error about port 8080, either a previous MCP server session is still running (no action needed — reuse it) or another process has taken the port. To use a different port, change `MSC_PORT=8080` in `mcp/.env` to an unused port (e.g. `8081`) and update the Claude Code MCP URL in Step 6 to match.
+**Do not close this terminal.** The server runs in the foreground. Closing it stops all Jira and Confluence tools until you restart it.
 
----
-
-## 8. Verify everything works
-
-Open a **second terminal** (leave the MCP server running in the first one) and launch Claude Code from the project root:
-
-```bash
-cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
-codemie-claude
-```
-
-> **Mac/Linux:**
-> ```bash
-> cd ~/Documents/MSC-BA-agent
-> claude
-> ```
-
-Once Claude Code is open, send this message:
-
-```
-hello, can you check if the MCP server is connected?
-```
-
-Claude should respond with a confirmation that the MCP server is reachable. If it does, setup is complete.
-
-**Then run a quick end-to-end check:**
-
-```
-/ba-workflow
-```
-
-You should see the workflow menu:
-
-```
-1. Spec only
-2. Stories only
-3. Full end-to-end
-4. Validate and publish
-```
-
-If the menu appears, the agents, skills, and CLAUDE.md are all loaded correctly.
+> **Port already in use?**
+> If you see a port conflict error, either a previous MCP server session is still running (reuse it — no restart needed) or another process has taken port 8080. To change the port, run `/setup` again and enter a different port number when prompted.
 
 ---
 
-## 9. Your daily workflow
+## 6. Restart Claude Code and verify
 
-Every time you start a new working session:
+After the `/setup` wizard completes, restart Claude Code so the MCP server connection takes effect:
+
+- **Terminal (CLI):** type `/exit`, then relaunch with `codemie-claude` or `claude` from the project root
+- **Desktop app:** press `Ctrl+R` (Windows/Linux) or `Cmd+R` (Mac)
+- **VS Code extension:** open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run `Claude: Restart`
+
+Once restarted, run the verification command:
+
+```
+/setup verify
+```
+
+The verify mode will:
+1. Call `hello_world` on the MCP server — confirms the server is reachable
+2. Call `health_check` — shows which integrations are active
+3. Ask for a Confluence page ID to confirm live read access (you can skip this if you do not have one to hand)
+4. Print a ready summary, e.g.:
+
+```
+🎉 MSC BA Agent is ready!
+
+✅ MCP server connected (port 8080)
+✅ Confluence connected (https://msccruises.atlassian.net)
+✅ Jira connected
+```
+
+If the MCP server is not reachable, check that the server terminal (Step 5) is still running and has not errored.
+
+Once `/setup verify` passes, you are fully set up. Type `/ba-workflow` to start.
+
+---
+
+## 7. Your daily workflow
+
+Every time you start a new working session, you only need two commands:
 
 **Terminal 1 — Start the MCP server (keep open):**
 ```bash
@@ -312,13 +255,70 @@ codemie-claude
 /ba-workflow
 ```
 
-Choose your option and follow the prompts.
-
-> The `uv sync` and `claude mcp add` steps from setup only need to be run once. You do not need to repeat them each session.
+> You do not need to re-run `/setup` each session. Credentials are stored in `mcp/.env` and persist between sessions. Only re-run `/setup` if your API token expires or you want to update your configuration.
 
 ---
 
-## 10. Troubleshooting
+## 8. Manual configuration reference
+
+If the `/setup` wizard cannot complete a step automatically, here is how to do each part by hand.
+
+### Manually create mcp/.env
+
+```bash
+cd mcp
+cp .env.example .env    # Mac/Linux
+copy .env.example .env  # Windows Command Prompt
+```
+
+Open `mcp/.env` and fill in:
+
+```
+MSC_HOST=0.0.0.0
+MSC_PORT=8080
+MSC_TRANSPORT=sse
+
+MSC_JIRA_URL=https://msccruises.atlassian.net
+MSC_JIRA_EMAIL=your.name@msccruises.com
+MSC_JIRA_TOKEN=your-api-token
+
+MSC_CONFLUENCE_URL=https://msccruises.atlassian.net
+MSC_CONFLUENCE_EMAIL=your.name@msccruises.com
+MSC_CONFLUENCE_TOKEN=your-api-token
+```
+
+`MSC_JIRA_TOKEN` and `MSC_CONFLUENCE_TOKEN` are the same Atlassian API token. The remaining variables (`MSC_ANYPOINT_*`, `MSC_GIT_*`, `MSC_MS_*`) are optional integrations — leave blank if not needed.
+
+### Manually install dependencies
+
+```bash
+cd mcp
+uv sync
+```
+
+### Manually register the MCP server with Claude Code
+
+```bash
+claude mcp add msc-ba --transport http http://localhost:8080/mcp
+```
+
+Or add it directly to `~/.claude/settings.json` (Windows: `C:\Users\[your_user]\.claude\settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "msc-ba": {
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+Verify it was added: `claude mcp list`
+
+---
+
+## 9. Troubleshooting
 
 ### "uv: command not found"
 
@@ -328,7 +328,7 @@ uv was not added to your PATH during installation.
   ```bash
   C:\Users\[your_user]\AppData\Roaming\Python\Python312\Scripts\uv.exe run msc-mcp-server
   ```
-  Or reinstall uv: `pip install uv` and restart your terminal.
+  Or reinstall: `pip install uv` and open a new terminal.
 
 - **Mac/Linux:**
   ```bash
@@ -338,73 +338,59 @@ uv was not added to your PATH during installation.
 
 ---
 
-### "python: command not found" or wrong Python version
+### "Python version too old" or "python: command not found"
 
-Check which Python version is active:
+The MCP server requires Python 3.12+. Check:
 ```bash
 python --version
 python3 --version
 ```
 
-If neither returns 3.12 or later, download the latest Python from https://www.python.org/downloads/ and ensure **"Add to PATH"** is ticked during installation.
+If neither returns 3.12 or later, download from https://www.python.org/downloads/ and ensure **"Add to PATH"** is ticked. Then tell uv to use that version:
+```bash
+uv python install 3.12
+```
 
 ---
 
-### MCP server starts but Claude says tools are not available
+### MCP server starts but `/setup verify` says tools are not available
 
-1. Confirm the server is running — check the MCP server terminal for the `Application startup complete.` message
-2. Confirm the MCP registration — run `claude mcp list` and check `msc-ba` is listed
-3. Restart Claude Code — close the Claude terminal and reopen it
-4. If you changed the port in `.env`, make sure the URL in `claude mcp list` matches
+1. Confirm the server terminal shows `Application startup complete.`
+2. Confirm MCP registration: `claude mcp list` — check `msc-ba` is listed at `http://localhost:8080/mcp`
+3. Restart Claude Code — the MCP connection only activates after a restart
+4. If you changed the port in `.env`, update the registered URL to match (re-run `/setup` or edit `settings.json` manually)
 
 ---
 
 ### "401 Unauthorized" or "403 Forbidden" from Confluence or Jira
 
-Your API token has either expired or is incorrect.
+Your API token has expired or is incorrect.
 
-1. Go to https://id.atlassian.com/manage/api-tokens
-2. Revoke the old token and create a new one
-3. Open `mcp/.env` and replace `MSC_JIRA_TOKEN` and `MSC_CONFLUENCE_TOKEN` with the new token
-4. Restart the MCP server
+1. Go to https://id.atlassian.com/manage/api-tokens, revoke the old token and create a new one
+2. Run `/setup` again — choose to re-configure when prompted — and enter the new token
+3. Restart the MCP server
 
-Also check that `MSC_JIRA_EMAIL` and `MSC_CONFLUENCE_EMAIL` match the Atlassian account that owns the token exactly.
+Also confirm that your email in `mcp/.env` exactly matches the Atlassian account that owns the token.
 
 ---
 
-### `/ba-workflow` does nothing or is not recognised
+### `/setup` or `/ba-workflow` is not recognised
 
-Claude Code must be launched from the project root — the folder that contains `CLAUDE.md` and the `agents/` directory:
+Claude Code must be launched from the project root — the folder containing `CLAUDE.md` and the `agents/` directory. If you launched from a different folder, the custom commands will not load.
 
 ```bash
 cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
 codemie-claude
 ```
 
-If you launched Claude Code from a different directory, the custom skills and CLAUDE.md will not be loaded.
-
 ---
 
 ### Port 8080 is already in use
 
-If you see a port conflict error when starting the MCP server, check whether a previous session's server is still running. If it is, you can reuse it — no need to restart.
+A previous session's MCP server is likely still running — you can reuse it without restarting.
 
-To kill the existing process and restart:
-- **Windows:** Open Task Manager, find the `python` process using port 8080, and end it
+To free the port if needed:
+- **Windows:** Open Task Manager → find the `python` process on port 8080 → End task
 - **Mac/Linux:** `lsof -ti:8080 | xargs kill`
 
----
-
-### "uv sync" fails with a build error
-
-Make sure you have Python 3.12+ installed. The `pyproject.toml` requires `requires-python = ">=3.12"`.
-
-Check the version uv is using:
-```bash
-uv python list
-```
-
-If 3.12 is not listed, install it:
-```bash
-uv python install 3.12
-```
+Alternatively, run `/setup` and choose a different port (e.g. `8081`).
