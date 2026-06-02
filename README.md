@@ -48,9 +48,9 @@ cd "C:\Users\[your_user]\MSC_BA_Agent\MSC_BA_Agent\mcp"
 uv run msc-mcp-server
 ```
 
-> **Windows note:** If `uv` is not found, use the full path:
-> ```bash
-> /c/Users/[your_user]/AppData/Roaming/Python/Python314/Scripts/uv.exe run msc-mcp-server
+> **Windows note:** If `uv` is not found, use the full path in Command Prompt or PowerShell:
+> ```
+> %APPDATA%\Python\Python314\Scripts\uv.exe run msc-mcp-server
 > ```
 
 You should see:
@@ -451,9 +451,9 @@ output/
 ## Troubleshooting
 
 **MCP server not starting — "uv: command not found"**
-Use the full path to uv on Windows:
-```bash
-/c/Users/[your_user]/AppData/Roaming/Python/Python314/Scripts/uv.exe run msc-mcp-server
+Use the full path to uv in Command Prompt or PowerShell:
+```
+%APPDATA%\Python\Python314\Scripts\uv.exe run msc-mcp-server
 ```
 
 **Port 8080 already in use**

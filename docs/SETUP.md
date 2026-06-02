@@ -323,7 +323,7 @@ uv was not added to your PATH during installation.
 
 Open a new **Command Prompt or PowerShell** window and use the full path to uv:
 ```
-C:\Users\[your_user]\AppData\Roaming\Python\Python312\Scripts\uv.exe run msc-mcp-server
+%APPDATA%\Python\Python314\Scripts\uv.exe run msc-mcp-server
 ```
 Or reinstall uv and reopen the window:
 ```
