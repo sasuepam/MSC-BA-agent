@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Change Request — Fix Puerto Rico Country Mapping for Status Match</title>
+</head>
+<body>
+
+  <h1>CR: Fix Puerto Rico Country Mapping for Status Match (US Site)</h1>
+  <p>Interface: INT010.3 | Initiative: MDTTPU — US Market Rollout | Status: Draft</p>
+  <p>Jira Ticket: <a href="https://smartship.atlassian.net/browse/MDTTPU-15115">MDTTPU-15115</a></p>
+
+  <h2>Summary</h2>
+  <p>
+    When a customer with a Puerto Rico (PR) address submits a status match via the US website, INT010.3
+    currently populates the CH001 country field with the website country (US) rather than the customer's
+    country of address (PR). For all markets previously rolled out, the website country and the customer's
+    country of address were identical, so this bug was never triggered. The US market introduces Puerto Rico
+    as a distinct address country on a US-market site, exposing the mapping gap. This CR fixes the source
+    of the country field in INT010.3 and aligns the downstream mappings in CRM AS IS, CHUB, and Salesforce
+    to accept and correctly handle the PR country code.
+  </p>
+
+  <h2>Change Scope</h2>
+  <ul>
+    <li>
+      <strong>INT010.3 — CH001 country field source:</strong> Change the source of the country field sent
+      to CH001 (Customer SAPI POST /customers) from <em>website country</em> to <em>country of address</em>.
+      This ensures Puerto Rico customers are identified with country code PR rather than US.
+    </li>
+    <li>
+      <strong>CRM AS IS — paese mapping:</strong> Add PRI + eng as a valid language/country combination
+      in the CRM AS IS paese mapping, so that Puerto Rico (ISO alpha-3: PRI) with English (eng) is
+      accepted and correctly resolved.
+    </li>
+    <li>
+      <strong>CHUB — country of residence mapping:</strong> Add PR to the country of residence mapping
+      table so that PR is correctly translated to the corresponding CHUB country of residence country code.
+    </li>
+    <li>
+      <strong>Salesforce S008 — Country__c mapping:</strong> Add PR to the S008 Country__c mapping so
+      that Puerto Rico is correctly populated in the Salesforce country field.
+    </li>
+  </ul>
+
+  <h2>Interfaces Affected</h2>
+  <ul>
+    <li>
+      <strong>INT010.3 — POST status-matches</strong> (MuleSoft → CHUB / CRM AS IS / Salesforce)<br/>
+      The CH001 country field currently takes the value from the website's market/locale (US) rather than
+      from the customer's country of address. The fix changes this to use country of address, so that
+      Puerto Rico customers receive PR as their country value throughout the downstream systems.
+      <br/>
+      Confluence: <a href="https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4339204140/INT010.3+-+POST+status-matches#Customer-SAPI%3A-POST-%2Fcustomers%3A-%5BinlineCard%5D">
+        INT010.3 — POST status-matches (Customer SAPI section)
+      </a>
+    </li>
+  </ul>
+
+  <h2>Rationale</h2>
+  <ul>
+    <li>
+      Puerto Rico is a US territory whose residents have a PR country of address, but who access the
+      MSC website via the US market site. The current mapping logic assumes that the website country and
+      the customer's country of address are always the same — an assumption that was valid for all
+      previously rolled-out markets (IE, UK, DACH, MED) but breaks for Puerto Rico on the US site.
+    </li>
+    <li>
+      Without this fix, Puerto Rican customers submitting a status match will have their country recorded
+      as US in CHUB, CRM AS IS, and Salesforce, resulting in incorrect customer data and potential
+      downstream issues (e.g. incorrect language/country combination rejected by CRM AS IS, wrong country
+      of residence stored in CHUB, incorrect Salesforce country field).
+    </li>
+    <li>
+      Requested by the MSC team as part of the US market rollout (September 2026). Raised in
+      <a href="https://smartship.atlassian.net/browse/MDTTPU-15115">MDTTPU-15115</a>.
+    </li>
+  </ul>
+
+  <h2>Resources</h2>
+  <ul>
+    <li>
+      <strong>INT010.3 Confluence page</strong> —
+      <a href="https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4339204140/INT010.3+-+POST+status-matches#Customer-SAPI%3A-POST-%2Fcustomers%3A-%5BinlineCard%5D">
+        INT010.3 — POST status-matches
+      </a>
+    </li>
+    <li>
+      <strong>MDTTPU-15115</strong> — Smartship Jira —
+      <a href="https://smartship.atlassian.net/browse/MDTTPU-15115">MDTTPU-15115</a>
+    </li>
+  </ul>
+
+  <h2>Acceptance Criteria</h2>
+
+  <p>
+    <strong>GIVEN</strong> a customer whose country of address is Puerto Rico (PR) submits a status match
+    via the US market website<br/>
+    <strong>WHEN</strong> INT010.3 calls Customer SAPI POST /customers (CH001)<br/>
+    <strong>THEN</strong> the country field is populated with PR (country of address), not US (website market country)
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> a PR country code is passed to the CRM AS IS paese mapping<br/>
+    <strong>WHEN</strong> the mapping logic resolves the paese value<br/>
+    <strong>THEN</strong> PRI + eng is accepted as a valid combination and the correct paese value is returned
+    without error
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> a PR country code is passed to the CHUB country of residence mapping<br/>
+    <strong>WHEN</strong> the mapping logic resolves the CHUB country of residence value<br/>
+    <strong>THEN</strong> PR is mapped to the correct CHUB country of residence country code and stored on
+    the customer record
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> a PR country code is passed to the Salesforce S008 Country__c mapping<br/>
+    <strong>WHEN</strong> the mapping logic resolves the Salesforce country value<br/>
+    <strong>THEN</strong> the Country__c field is populated with the correct PR value in Salesforce
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> a customer from any previously released market (IE, UK, DACH, MED) submits a
+    status match<br/>
+    <strong>WHEN</strong> INT010.3 processes the request<br/>
+    <strong>THEN</strong> existing behaviour is unchanged — no regression introduced for markets where
+    website country and country of address are the same
+  </p>
+
+</body>
+</html>

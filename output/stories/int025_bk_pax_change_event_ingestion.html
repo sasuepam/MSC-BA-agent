@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>BA Stories – INT025 BK_PAX_CHANGE_EVENT Ingestion Logic</title></head>
+<body>
+<h1>BA Stories – INT025 BK_PAX_CHANGE_EVENT Ingestion Logic</h1>
+
+<h2>Splitting Rationale</h2>
+<p>
+  INT025 is an existing MuleSoft interface. The specification describes a single, cohesive change to its ingestion logic: restrict BK_PAX_CHANGE_EVENT propagation from all passengers on a booking to only those flagged with <code>isChanged=true</code>, and for each changed passenger forward one event per cruise segment they appear on. All business requirements, use cases, and acceptance criteria in the spec relate to this one logical change. No ADF interfaces are involved or referenced, so the ADF exclusion rule does not apply. One CR is raised to cover the complete change.
+</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Story</th>
+    <th>Scope</th>
+    <th>Reason for separation (or consolidation)</th>
+  </tr>
+  <tr>
+    <td>CR-001: INT025 – Restrict BK_PAX_CHANGE_EVENT to Changed Passengers</td>
+    <td>
+      Change the INT025 ingestion logic to filter participants by <code>isChanged=true</code> and forward one BK_PAX_CHANGE_EVENT per changed passenger per cruise segment they appear on. Covers: passenger filtering, cruise-segment fan-out, discard behaviour (no changed passengers), error handling (malformed payload, AJO 5xx), idempotency, and SLA/observability requirements.
+    </td>
+    <td>
+      All changes are part of a single logical feature on a single existing interface (INT025). No separate change types or independent sub-features warrant splitting. Consolidated into one CR.
+    </td>
+  </tr>
+</table>
+
+
+<h2>CR: INT025 – Restrict BK_PAX_CHANGE_EVENT to Changed Passengers</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr>
+    <td>Type</td>
+    <td>CR</td>
+  </tr>
+  <tr>
+    <td>Summary</td>
+    <td>INT025 – Restrict BK_PAX_CHANGE_EVENT propagation to changed passengers only</td>
+  </tr>
+  <tr>
+    <td>Change Scope</td>
+    <td>
+      <ul>
+        <li>Modify INT025 ingestion logic to inspect the <code>isChanged</code> flag on each participant in the incoming BK_PAX_CHANGE_EVENT payload from DTS.</li>
+        <li>Forward the BK_PAX_CHANGE_EVENT to AJO only for passengers where <code>isChanged=true</code>; passengers without this flag (or with <code>isChanged=false</code>) must be excluded from propagation.</li>
+        <li>For each changed passenger, iterate over all cruise segments in the booking and forward one event per booking-cruise-passenger combination (e.g. B1_C1_P1, B1_C2_P1) for each cruise segment that contains that passenger.</li>
+        <li>Cruise segments that do not contain any changed passenger must not receive any event.</li>
+        <li>If no passenger in the payload has <code>isChanged=true</code>, INT025 must discard the event and return an acknowledgement to DTS without forwarding anything to AJO.</li>
+        <li>If the incoming payload fails schema validation (e.g. missing booking ID, empty participant list), INT025 must return an error response to DTS with sufficient detail to identify the failing field(s) and must not forward anything to AJO.</li>
+        <li>If AJO returns a 5xx error for one booking-cruise-passenger forwarding attempt, INT025 must handle the failure without silently dropping other combinations in the same event; the failure must be logged with booking ID, cruise segment ID, and passenger ID.</li>
+        <li>The filtering and routing logic must be applied idempotently so that DTS retransmissions do not produce duplicate events in AJO for the same booking-cruise-passenger combination.</li>
+        <li>All BK_PAX_CHANGE_EVENTs received by INT025 — including discarded and errored events — must be logged with booking ID, event timestamp, filtering outcome, and the list of forwarded booking-cruise-passenger combinations.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>Rationale</td>
+    <td>
+      <ul>
+        <li>The current INT025 implementation propagates BK_PAX_CHANGE_EVENT to AJO for all passengers on a booking when any single passenger change is detected, causing AJO to reset the contact plan (marketing journey) for passengers whose details have not actually changed.</li>
+        <li>Restricting propagation to only the flagged passenger(s) ensures that AJO contact plan resets are triggered exclusively for the affected individual, preventing unintended disruption to the marketing journeys of other passengers on the same booking.</li>
+        <li>The per-cruise-segment fan-out ensures the contact plan reset is applied consistently across all itineraries a changed passenger is booked on.</li>
+        <li>The change addresses open point CRM2-10010 and supports all field-level change types defined in parent requirement CRM2-9923 (first name, last name, date of birth, email, mobile, language, biometric check-in completion, credit card registration).</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>MuleSoft Requirements Page</td>
+    <td><a href="https://msccruises.atlassian.net/browse/CRM2-10010">https://msccruises.atlassian.net/browse/CRM2-10010</a></td>
+  </tr>
+  <tr>
+    <td>High Level Architecture Document</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>API Documentation</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Confluence Page</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+<h3>Acceptance Criteria</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Scenario</th>
+    <th>Given</th>
+    <th>When</th>
+    <th>Then</th>
+  </tr>
+  <tr>
+    <td>Single changed passenger on multiple cruise segments – events forwarded per segment</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT for booking B1 with passengers P1 (isChanged=true), P2 (isChanged=false), and P3 (isChanged=false); the booking contains cruise segment C1 referencing P1 and P2, and cruise segment C2 referencing P1 and P3</td>
+    <td>INT025 processes the event</td>
+    <td>INT025 forwards the event to AJO for B1_C1_P1 and B1_C2_P1 only; AJO does not receive any event for P2 or P3 or any other combination in booking B1; INT025 returns a successful response to DTS; a log entry confirms P1 was identified as changed and events were forwarded for B1_C1_P1 and B1_C2_P1</td>
+  </tr>
+  <tr>
+    <td>Single changed passenger on one cruise segment – event forwarded for that segment only</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT for booking B1 with passengers P1 (isChanged=true) and P2 (isChanged=false); the booking contains cruise segment C1 referencing P1 and P2, and cruise segment C2 referencing P2 only</td>
+    <td>INT025 processes the event</td>
+    <td>INT025 forwards exactly one event to AJO for B1_C1_P1; AJO does not receive any event for B1_C2 or for P2 in any segment; INT025 returns a successful response to DTS; a log entry confirms P1 was found in C1 only and one event was forwarded</td>
+  </tr>
+  <tr>
+    <td>Multiple changed passengers – events forwarded per changed passenger per their cruise segments</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT for booking B1 with passengers P1 (isChanged=true) and P2 (isChanged=true); the booking contains cruise segment C1 referencing P1 and P2, and cruise segment C2 referencing P1 only</td>
+    <td>INT025 processes the event</td>
+    <td>INT025 forwards exactly three events to AJO: B1_C1_P1, B1_C2_P1, and B1_C1_P2; AJO does not receive an event for B1_C2_P2 because P2 does not appear in C2; INT025 returns a successful response to DTS; a log entry confirms both P1 and P2 were identified as changed and lists all forwarded combinations</td>
+  </tr>
+  <tr>
+    <td>No passenger flagged as changed – event discarded, no propagation to AJO</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT for booking B1 with passengers P1, P2, and P3 all having isChanged=false or the flag absent</td>
+    <td>INT025 processes the event</td>
+    <td>INT025 does not forward any event to AJO; INT025 returns the agreed acknowledgement to DTS (response code to be confirmed); a log entry confirms no changed passengers were identified and the event was discarded</td>
+  </tr>
+  <tr>
+    <td>Changed passenger not present in any cruise segment – no propagation, condition handled</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT for booking B1 with P1 (isChanged=true) but no cruise segment in the payload references P1</td>
+    <td>INT025 processes the event</td>
+    <td>INT025 does not forward any event to AJO; INT025 returns the agreed response to DTS (success no-op or error – to be confirmed); a log entry is written indicating P1 was flagged as changed but was not found in any cruise segment</td>
+  </tr>
+  <tr>
+    <td>AJO returns 5xx error for one forwarded combination – failure logged, other combinations unaffected</td>
+    <td>DTS sends a valid BK_PAX_CHANGE_EVENT with P1 (isChanged=true) on cruise segments C1 and C2; AJO returns a 5xx error for the B1_C2_P1 forwarding attempt</td>
+    <td>INT025 processes the AJO error response</td>
+    <td>INT025 logs the AJO 5xx failure for B1_C2_P1 with booking ID, cruise segment ID, passenger ID, and error detail; INT025 applies the agreed retry policy (to be confirmed); the successfully forwarded event B1_C1_P1 is not re-sent unless INT025 re-processes the entire event; INT025 reports the failure through the agreed mechanism (DLQ, alert, or error response to DTS – to be confirmed)</td>
+  </tr>
+  <tr>
+    <td>Malformed BK_PAX_CHANGE_EVENT – schema validation fails, error returned to DTS</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT that is missing the booking ID field</td>
+    <td>INT025 validates the incoming payload</td>
+    <td>INT025 returns an HTTP 4xx response (exact code to be confirmed) to DTS with an error message identifying the missing booking ID field; AJO receives no events; a log entry records the validation failure with the received payload or a sanitised representation of it</td>
+  </tr>
+  <tr>
+    <td>BK_PAX_CHANGE_EVENT with empty participant list – error or no-op returned to DTS</td>
+    <td>DTS sends a BK_PAX_CHANGE_EVENT for booking B1 with an empty participant list</td>
+    <td>INT025 validates the incoming payload</td>
+    <td>INT025 returns the agreed response to DTS (schema validation error or no-op – to be confirmed); AJO receives no events; a log entry records that an empty participant list was received for booking B1</td>
+  </tr>
+  <tr>
+    <td>DTS retransmits the same event – no duplicate events produced in AJO</td>
+    <td>DTS retransmits an identical BK_PAX_CHANGE_EVENT that INT025 has already processed successfully for booking B1 and passenger P1</td>
+    <td>INT025 processes the retransmitted event</td>
+    <td>INT025 detects the duplicate using the agreed idempotency mechanism (deduplication key or event ID – to be confirmed); INT025 does not forward a duplicate event to AJO for any already-processed booking-cruise-passenger combination; a log entry records that the event was identified as a duplicate and was not reforwarded</td>
+  </tr>
+  <tr>
+    <td>AJO endpoint called with correct method, headers, and payload structure</td>
+    <td>A valid BK_PAX_CHANGE_EVENT with one changed passenger P1 appearing on two cruise segments is received by INT025</td>
+    <td>INT025 forwards the event to AJO for B1_C1_P1 and B1_C2_P1</td>
+    <td>AJO endpoint receives each request with the correct HTTP method, authentication headers, and payload containing the booking-cruise-passenger composite identifier in the agreed format (all details to be confirmed with development team); AJO returns HTTP 200 or 202 for each forwarded event; INT025 returns a successful response to DTS after all AJO calls complete</td>
+  </tr>
+</table>
+
+</body>
+</html>

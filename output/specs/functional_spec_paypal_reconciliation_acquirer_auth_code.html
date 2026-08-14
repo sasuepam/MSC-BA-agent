@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – PayPal Reconciliation – Acquirer Auth Code in Apply Payment</title>
+</head>
+<body>
+
+<h1>Functional Specification – PayPal Reconciliation – Acquirer Auth Code in Apply Payment</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>06/Jul/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>ADR0023 – PayPal Order Identifier Reconciliation</td>
+    <td><a href="https://msccruises.atlassian.net/wiki/spaces/EA/pages/4381835266/ADR0023+-+Paypal+Order+Identifier+Reconciliation">https://msccruises.atlassian.net/wiki/spaces/EA/pages/4381835266/ADR0023+-+Paypal+Order+Identifier+Reconciliation</a></td>
+  </tr>
+  <tr>
+    <td>Jira ticket – INT007 CR for acquirerAuthorizationCode mapping change</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Jira ticket – INT146 CR for acquirerAuthorizationCode mapping change</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+  When a customer books a cruise via the new MSC website and pays by PayPal, the OPT booking reference is not yet created at the time payment is captured. This means that the PayPal transaction is completed without a booking reference, leaving the Finance team unable to reconcile the PayPal payment to the booking without manual intervention.
+</p>
+<p>
+  The root cause is a behavioural difference between the old website (where the OPT booking was created before payment, so the booking reference was available in PayPal at payment time) and the new website (where the OPT booking is created after payment, so no booking reference is available at the point of PayPal capture).
+</p>
+<p>
+  ADR0023 evaluated several reconciliation options. The DataTrans (DTS) PATCH API — which would allow the booking reference to be written back to PayPal after OPT booking creation — was identified as the ideal long-term solution but is not achievable in the near term because DataTrans does not have this integration on its current roadmap.
+</p>
+<p>
+  The agreed short-term solution (ADR0023 Option B) is to pass the <code>acquirerAuthorizationCode</code> from the DataTrans authorisation step through to SAP via the existing DTS ApplyPayment API. The <code>acquirerAuthorizationCode</code> is a unique reference that is shared between DataTrans and PayPal at the time of authorisation, and SAP can use it as a reconciliation key to match PayPal transactions to bookings.
+</p>
+<p>
+  The implementation decision is to reuse the existing optional field <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> in the ApplyPayment request, populating it with the <code>acquirerAuthorizationCode</code> value sourced from the DataTrans transaction. This approach was chosen over adding a new dedicated API field (Option A) because it requires no DTS API development and has no impact on existing API consumers.
+</p>
+<p>
+  A critical dependency: the DataTrans transaction status endpoint (called at the start of the integration) returns the <code>acquirerAuthorizationCode</code> only when the transaction is in <strong>"authorized"</strong> state (e.g. Klarna). For payment methods where the transaction is in <strong>"authenticated"</strong> state at that point — including PayPal (PAP), Card, Apple Pay, and Google Pay — the <code>acquirerAuthorizationCode</code> is not present in the status response and must instead be sourced from the DataTrans authorisation response (authorize-split endpoint called later in the flow).
+</p>
+<p>
+  This change affects two existing interfaces: <strong>INT007</strong> (payment in the booking funnel) and <strong>INT146</strong> (payment in the MyMSC private area). Both interfaces use the DTS ApplyPayment API. The same reconciliation problem has been confirmed to exist for <strong>INT140</strong> and <strong>INT188</strong>, which use the DTS confItem flow; the requirements for those interfaces are not yet detailed in this specification due to open points still to be resolved.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: <em>As a [actor] I want to [action] so that [benefit]</em></p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a Finance team member, I want the PayPal acquirer authorisation code to be sent to SAP at the time of payment processing so that I can reconcile PayPal transactions to bookings without manual intervention.</td>
+    <td>When a customer pays by PayPal via the new MSC website, the OPT booking reference is not available at the time of payment. The <code>acquirerAuthorizationCode</code> generated by DataTrans during the authorisation step is shared with PayPal and provides a reliable reconciliation key. INT007 and INT146 must populate <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> with this value so that SAP receives it as part of the Apply Payment call.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>
+      A customer has completed a PayPal payment on the new MSC website via the booking funnel (INT007). The DataTrans transaction is in "authenticated" state when the integration begins processing. The authorize-split step has been completed and the DataTrans authorisation response contains the <code>acquirerAuthorizationCode</code>.
+    </td>
+    <td>Customer; New MSC Website; MuleSoft INT007 (DTS Apply Payment – booking funnel); DataTrans; SAP</td>
+    <td>PayPal payment in booking funnel — acquirerAuthorizationCode sourced from authorisation response and passed to SAP via Apply Payment</td>
+    <td>
+      The customer completes a PayPal payment on the new website. MuleSoft INT007 is triggered.<br><br>
+      INT007 calls the DataTrans transaction status endpoint (GET /v1/transactions/{transactionId}). The response shows the transaction is in "authenticated" state. The <code>acquirerAuthorizationCode</code> is not present in the status response.<br><br>
+      INT007 calls the DataTrans authorize-split endpoint (POST /v1/transactions/{transactionId}/authorize) as part of the existing flow. The authorisation response contains <code>detail.authorize.acquirerAuthorizationCode</code>.<br><br>
+      INT007 maps the <code>acquirerAuthorizationCode</code> value from the authorisation response to <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code>.<br><br>
+      INT007 calls the DTS Apply Payment API (MuleSoft DTS ApplyPayment process API) with the updated request, including the <code>ReferenceNo</code> populated with the <code>acquirerAuthorizationCode</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>
+      A customer has completed a PayPal payment on the new MSC website via the MyMSC private area (INT146). The DataTrans transaction is in "authenticated" state when the integration begins processing. The authorize-split step has been completed and the DataTrans authorisation response contains the <code>acquirerAuthorizationCode</code>.
+    </td>
+    <td>Customer; MyMSC Private Area; MuleSoft INT146 (DTS Apply Payment – MyMSC); DataTrans; SAP</td>
+    <td>PayPal payment in MyMSC private area — acquirerAuthorizationCode sourced from authorisation response and passed to SAP via Apply Payment</td>
+    <td>
+      The customer completes a PayPal payment in the MyMSC private area. MuleSoft INT146 is triggered.<br><br>
+      INT146 calls the DataTrans transaction status endpoint (GET /v1/transactions/{transactionId}). The response shows the transaction is in "authenticated" state. The <code>acquirerAuthorizationCode</code> is not present in the status response.<br><br>
+      INT146 calls the DataTrans authorize-split endpoint (POST /v1/transactions/{transactionId}/authorize) as part of the existing flow. The authorisation response contains <code>detail.authorize.acquirerAuthorizationCode</code>.<br><br>
+      INT146 maps the <code>acquirerAuthorizationCode</code> value from the authorisation response to <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code>.<br><br>
+      INT146 calls the DTS Apply Payment API (MuleSoft DTS ApplyPayment process API) with the updated request, including the <code>ReferenceNo</code> populated with the <code>acquirerAuthorizationCode</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>
+      A customer has completed a Klarna (KLN) payment processed via INT007 or INT146. The DataTrans transaction is in "authorized" state when the integration calls the status endpoint. The <code>acquirerAuthorizationCode</code> is present in the status response.
+    </td>
+    <td>Customer; MSC Website or MyMSC; MuleSoft INT007 or INT146; DataTrans; SAP</td>
+    <td>Klarna payment — acquirerAuthorizationCode sourced from status response and passed to SAP via Apply Payment</td>
+    <td>
+      The customer completes a Klarna payment. MuleSoft INT007 or INT146 is triggered.<br><br>
+      The integration calls the DataTrans transaction status endpoint (GET /v1/transactions/{transactionId}). The response shows the transaction in "authorized" state and includes <code>detail.authorize.acquirerAuthorizationCode</code>.<br><br>
+      The integration maps the <code>acquirerAuthorizationCode</code> from the status response to <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code>.<br><br>
+      The integration calls the DTS Apply Payment API (MuleSoft DTS ApplyPayment process API) with <code>ReferenceNo</code> populated.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-004</td>
+    <td>
+      A customer has completed a payment via INT007 or INT146 using a payment method (Card, Apple Pay, Google Pay) where the DataTrans transaction is in "authenticated" state at the time of the status call and no <code>acquirerAuthorizationCode</code> is available in the status response. The authorize-split response also does not contain an <code>acquirerAuthorizationCode</code> for this payment method.
+    </td>
+    <td>Customer; MSC Website or MyMSC; MuleSoft INT007 or INT146; DataTrans; SAP</td>
+    <td>Payment method with no acquirerAuthorizationCode available — Apply Payment sent with ReferenceNo absent or empty</td>
+    <td>
+      The customer completes a payment by Card, Apple Pay, or Google Pay. MuleSoft INT007 or INT146 is triggered.<br><br>
+      The integration calls the DataTrans transaction status endpoint. The transaction is in "authenticated" state; no <code>acquirerAuthorizationCode</code> is present.<br><br>
+      The integration calls the DataTrans authorize-split endpoint. The authorisation response does not contain <code>acquirerAuthorizationCode</code> for this payment method.<br><br>
+      The integration determines that no <code>acquirerAuthorizationCode</code> is available. <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> is left unpopulated (absent or null, consistent with the field being optional).<br><br>
+      The integration calls the DTS Apply Payment API (MuleSoft DTS ApplyPayment process API) without a <code>ReferenceNo</code> value. The Apply Payment request is processed normally by SAP.<br><br>
+      No error is raised for the absence of <code>ReferenceNo</code>.
+    </td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: new requirements introduced by this change only.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-002</td>
+    <td>INT007, INT146</td>
+    <td>The <code>acquirerAuthorizationCode</code> value sourced from DataTrans and passed to SAP via <code>ReferenceNo</code> must be an exact, unmodified copy of the value returned by DataTrans. No transformation, truncation, or encoding must be applied. This ensures that SAP and the Finance team can use the value as a reliable reconciliation key that matches the value visible in the DataTrans portal and in PayPal.</td>
+    <td>Data Integrity</td>
+    <td>High</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS &amp; ACCEPTANCE CRITERIA  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+
+  <!-- UC-001 scenarios -->
+  <tr>
+    <td>UC-001</td>
+    <td>
+      <strong>TC-001 – Happy path (INT007): PayPal payment in booking funnel — acquirerAuthorizationCode sourced from authorisation response and sent to SAP</strong><br>
+      Given a PayPal payment has been completed in the booking funnel and the DataTrans transaction is in "authenticated" state when INT007 calls the status endpoint<br>
+      When INT007 calls the DataTrans authorize-split endpoint (POST /v1/transactions/{transactionId}/authorize) and receives a response containing <code>detail.authorize.acquirerAuthorizationCode</code><br>
+      Then INT007 maps the <code>acquirerAuthorizationCode</code> to <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> and calls the DTS Apply Payment API with the populated field; SAP receives the request with the correct value in <code>ReferenceNo</code>
+    </td>
+    <td>
+      The DataTrans status call returns a transaction in "authenticated" state with no <code>acquirerAuthorizationCode</code>.<br>
+      The authorize-split call returns HTTP 200 with a non-null <code>detail.authorize.acquirerAuthorizationCode</code>.<br>
+      The DTS Apply Payment API call is made by INT007 with <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> equal to the <code>acquirerAuthorizationCode</code> value from the authorisation response.<br>
+      SAP confirms receipt of the Apply Payment request with the correct <code>ReferenceNo</code> value.<br>
+      The value in <code>ReferenceNo</code> matches the "Acquirer authoriz code" field visible in the DataTrans portal for the same transaction.
+    </td>
+    <td>
+      <strong>Prepare:</strong> A UAT PayPal transaction on the new website booking funnel where the OPT booking has not yet been created at payment time. Obtain the DataTrans transaction ID. Confirm the expected <code>acquirerAuthorizationCode</code> value from the DataTrans portal for cross-validation. Confirm the SAP UAT endpoint and the field in the SAP Apply Payment request where <code>ReferenceNo</code> is received.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>
+      <strong>TC-002 – Happy path (INT007): correct HTTP method and endpoint used for DTS Apply Payment call</strong><br>
+      Given INT007 has successfully retrieved the <code>acquirerAuthorizationCode</code> from the DataTrans authorisation response<br>
+      When INT007 calls the DTS Apply Payment API<br>
+      Then INT007 uses the correct HTTP method, endpoint URL, authentication headers, and payload schema as defined in the Apply Payment API contract (Apply payment R140 from DTS)
+    </td>
+    <td>
+      INT007 calls the DTS Apply Payment API using the HTTP method defined in the Apply Payment API contract [TO BE CONFIRMED].<br>
+      The request includes valid authentication credentials for the UAT environment.<br>
+      The request body conforms to the <code>DtsApplyPaymentRequestMessage</code> schema with <code>Payment.ReferenceNo</code> populated.<br>
+      The DTS Apply Payment API returns HTTP 200 (or the agreed success code [TO BE CONFIRMED]).<br>
+      INT007 returns a success response to the calling system.
+    </td>
+    <td>
+      <strong>Prepare:</strong> Confirm the DTS Apply Payment API endpoint URL, HTTP method, required authentication headers, and expected response codes for UAT. Prepare valid INT007 credentials for UAT. Confirm the full <code>DtsApplyPaymentRequestMessage</code> schema, including which fields are mandatory, from the Apply payment R140 data mapping document.
+    </td>
+  </tr>
+
+  <!-- UC-002 scenarios -->
+  <tr>
+    <td>UC-002</td>
+    <td>
+      <strong>TC-003 – Happy path (INT146): PayPal payment in MyMSC private area — acquirerAuthorizationCode sourced from authorisation response and sent to SAP</strong><br>
+      Given a PayPal payment has been completed in the MyMSC private area and the DataTrans transaction is in "authenticated" state<br>
+      When INT146 calls the DataTrans authorize-split endpoint and receives a response containing <code>detail.authorize.acquirerAuthorizationCode</code><br>
+      Then INT146 maps the value to <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> and calls the DTS Apply Payment API; SAP receives the request with the correct value
+    </td>
+    <td>
+      The DataTrans status call returns a transaction in "authenticated" state with no <code>acquirerAuthorizationCode</code>.<br>
+      The authorize-split call returns HTTP 200 with a non-null <code>detail.authorize.acquirerAuthorizationCode</code>.<br>
+      The DTS Apply Payment API call is made by INT146 with <code>Payment.ReferenceNo</code> equal to the <code>acquirerAuthorizationCode</code>.<br>
+      SAP confirms receipt with the correct <code>ReferenceNo</code> value.<br>
+      The value matches the DataTrans portal entry for the same transaction.
+    </td>
+    <td>
+      <strong>Prepare:</strong> A UAT PayPal transaction completed in the MyMSC private area. Obtain the DataTrans transaction ID. Confirm the expected <code>acquirerAuthorizationCode</code> from the DataTrans portal. Confirm SAP UAT receipt as per TC-001 approach. Verify INT146 uses the same authorize-split endpoint and mapping logic as INT007.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>
+      <strong>TC-004 – Alternative path (INT146): correct HTTP method and endpoint used for DTS Apply Payment call</strong><br>
+      Given INT146 has successfully retrieved the <code>acquirerAuthorizationCode</code><br>
+      When INT146 calls the DTS Apply Payment API<br>
+      Then INT146 uses the correct HTTP method, endpoint URL, authentication, and schema consistent with the Apply Payment API contract
+    </td>
+    <td>
+      Same criteria as TC-002, applied to INT146.<br>
+      INT146 uses the correct HTTP method [TO BE CONFIRMED] and endpoint.<br>
+      Apply Payment request body conforms to schema with <code>Payment.ReferenceNo</code> populated.<br>
+      DTS Apply Payment API returns the agreed success code.<br>
+      INT146 returns a success response to the MyMSC calling system.
+    </td>
+    <td>
+      <strong>Prepare:</strong> Same as TC-002 but for INT146 UAT environment credentials and endpoint. Confirm whether INT146 uses a separate Apply Payment endpoint or the same one as INT007.
+    </td>
+  </tr>
+
+  <!-- UC-003 scenarios -->
+  <tr>
+    <td>UC-003</td>
+    <td>
+      <strong>TC-005 – Happy path: Klarna payment — acquirerAuthorizationCode sourced from status response and sent to SAP</strong><br>
+      Given a Klarna payment has been completed and the DataTrans transaction is in "authorized" state when INT007 or INT146 calls the status endpoint<br>
+      When the integration reads <code>detail.authorize.acquirerAuthorizationCode</code> from the DataTrans status response (GET /v1/transactions/{transactionId})<br>
+      Then the integration maps the value to <code>DtsApplyPaymentRequestMessage.Payment.ReferenceNo</code> and calls the DTS Apply Payment API; SAP receives the request with the correct value
+    </td>
+    <td>
+      The DataTrans status call returns a transaction in "authorized" state with a non-null <code>detail.authorize.acquirerAuthorizationCode</code>.<br>
+      The integration does not call the authorize-split endpoint to obtain the code (it is already available from the status response).<br>
+      The DTS Apply Payment API is called with <code>Payment.ReferenceNo</code> equal to the <code>acquirerAuthorizationCode</code> from the status response.<br>
+      SAP confirms receipt of the Apply Payment request with the correct <code>ReferenceNo</code>.
+    </td>
+    <td>
+      <strong>Prepare:</strong> A UAT Klarna transaction for which the DataTrans status endpoint returns an "authorized" state. Obtain the <code>acquirerAuthorizationCode</code> value from the DataTrans portal for cross-validation. Confirm with the development team whether <code>ReferenceNo</code> is expected to be populated for Klarna transactions (subject to resolution of the open question on payment method scope).
+    </td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>
+      <strong>TC-006 – Alternative path: Klarna transaction — authorize-split not called for acquirerAuthorizationCode sourcing</strong><br>
+      Given a Klarna payment where the status response already contains <code>acquirerAuthorizationCode</code><br>
+      When the integration processes the payment<br>
+      Then the integration does not make an additional authorize-split call solely to obtain the <code>acquirerAuthorizationCode</code>, and the value from the status response is used directly
+    </td>
+    <td>
+      The integration flow log confirms only one DataTrans status call was made and no unnecessary authorize-split call was triggered for <code>acquirerAuthorizationCode</code> sourcing.<br>
+      The value in <code>Payment.ReferenceNo</code> in the Apply Payment request matches the value from the status response.<br>
+      No performance degradation is introduced by redundant API calls.
+    </td>
+    <td>
+      <strong>Prepare:</strong> A UAT Klarna transaction. Capture the integration flow log in UAT to confirm the call sequence (status → Apply Payment, without an extra authorize-split call for the auth code). Confirm the expected call sequence with the development team.
+    </td>
+  </tr>
+
+  <!-- UC-004 scenarios -->
+  <tr>
+    <td>UC-004</td>
+    <td>
+      <strong>TC-007 – Alternative path: Card payment — no acquirerAuthorizationCode available — Apply Payment sent without ReferenceNo</strong><br>
+      Given a Card payment processed via INT007 or INT146 where neither the DataTrans status response nor the authorisation response contains an <code>acquirerAuthorizationCode</code><br>
+      When the integration calls the DTS Apply Payment API<br>
+      Then the Apply Payment request is sent with <code>Payment.ReferenceNo</code> absent (or null, consistent with the field being optional) and no error is raised
+    </td>
+    <td>
+      The DataTrans status call returns "authenticated" state with no <code>acquirerAuthorizationCode</code>.<br>
+      The authorize-split response contains no <code>acquirerAuthorizationCode</code> for this payment method.<br>
+      The DTS Apply Payment API is called without <code>Payment.ReferenceNo</code> (or with it null/absent).<br>
+      The Apply Payment API accepts the request and returns the agreed success code.<br>
+      No error is logged for the absence of <code>ReferenceNo</code>.
+    </td>
+    <td>
+      <strong>Prepare:</strong> A UAT Card payment transaction. Confirm with the development team the agreed behaviour for absent <code>ReferenceNo</code>: optional field omission vs. explicit null. Confirm that the DTS Apply Payment API accepts the request without <code>ReferenceNo</code> (no mandatory field validation failure). Confirm with SAP team that no downstream SAP validation rejects the request.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-004</td>
+    <td>
+      <strong>TC-008 – Alternative path: Apple Pay / Google Pay — no acquirerAuthorizationCode — Apply Payment proceeds normally</strong><br>
+      Given an Apple Pay or Google Pay payment processed via INT007 or INT146 where no <code>acquirerAuthorizationCode</code> is available<br>
+      When the integration calls the DTS Apply Payment API<br>
+      Then the Apply Payment request is sent without <code>ReferenceNo</code> and the integration completes successfully
+    </td>
+    <td>
+      Same criteria as TC-007, applied to Apple Pay and Google Pay transactions.<br>
+      Apply Payment API returns the agreed success code.<br>
+      No error is logged relating to missing <code>acquirerAuthorizationCode</code> for these payment methods.
+    </td>
+    <td>
+      <strong>Prepare:</strong> UAT Apple Pay and Google Pay transactions. Confirm whether UAT environments support Apple Pay / Google Pay test payments; if not, confirm with the development team an alternative approach (e.g. mocked DataTrans response returning "authenticated" state with no <code>acquirerAuthorizationCode</code>).
+    </td>
+  </tr>
+
+</table>
+
+<footer>
+  Generated by MSC BA Agent &middot; functional-spec-generator &middot; 06/Jul/2026
+</footer>
+
+</body>
+</html>

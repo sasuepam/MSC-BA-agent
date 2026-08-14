@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BA Stories — Hold Option Additional Event Fields in CDP</title>
+</head>
+<body>
+
+<h1>BA Stories — Hold Option Additional Event Fields in CDP</h1>
+<p>Initiative: Hold Option Additional Event Fields in CDP | Jira Reference: CRM2-11036 | Generated: 12/Aug/2026</p>
+
+<hr/>
+
+<!-- ═══════════════════════════════════════════════════════
+     CR-001: Enrich Hold Option CDP Event with Additional Fields
+════════════════════════════════════════════════════════ -->
+
+<h1>CR: Enrich Hold Option CDP Event with Additional Fields (INT-006)</h1>
+<p>Interface: INT-006 | Initiative: Hold Option Additional Event Fields in CDP | Status: Draft</p>
+
+<h2>Summary</h2>
+<p>
+  The Hold Option CDP event fired by the INT-006 MuleSoft integration currently contains insufficient data for downstream CRM and Cheetah email templates to render personalised content. This change enriches the event payload with four additional fields — ship code, cabin category code, itinerary description, and cruise length — so that customer-facing Hold Option email templates can display meaningful, context-specific cruise information.
+</p>
+
+<h2>Change Scope</h2>
+<ul>
+  <li>The Hold Option CDP event is dispatched via the <strong>A070</strong> downstream request within INT-006. This change enriches the A070 payload with four additional optional fields — all four fields are defined as optional in the CDP payload so that the event is not blocked or failed if the DTS Itinerary Details API call is unavailable or incomplete.</li>
+  <li>Add <strong>shipCode</strong> (optional) to the Hold Option CDP event payload. Derived from the first two characters of the Cruise ID already available in the INT-006 request. No new data source required.</li>
+  <li>Add <strong>cabinCategoryCode</strong> (optional) to the Hold Option CDP event payload. Sourced from the booking funnel payload already processed by INT-006. One or more codes are concatenated as a comma-separated string consistent with the abandoned cart integration pattern.</li>
+  <li>Add <strong>itineraryDescription</strong> (optional) to the Hold Option CDP event payload. Sourced from the DTS Itinerary Details API response, which is already called non-blocking at the start of the INT-006 flow. If the DTS call fails, this field is absent or null and the event is still fired.</li>
+  <li>Add <strong>cruiseLength</strong> (optional, number of nights) to the Hold Option CDP event payload. Sourced from the DTS Itinerary Details API response. As with itinerary description, if the DTS call fails, this field is absent or null and the event is still fired.</li>
+  <li>The DTS Itinerary Details API call within INT-006 must remain non-blocking. No new synchronous external API calls are introduced by this change.</li>
+  <li>When the DTS call fails, INT-006 must log the failure (error type, Cruise ID, timestamp) and continue — the hold option creation and CDP event dispatch must not be blocked.</li>
+  <li>Full ship name (localised) is explicitly out of scope for this change — it is not returned by the POST booking response and would require a DTS dependency; noted as an open item.</li>
+  <li>Full port list is explicitly out of scope for this iteration.</li>
+  <li>Business logic for mapping ship code to full ship name, and any localisation of field values for email templates, is handled downstream by CDP/Cheetah and is out of scope for MuleSoft.</li>
+</ul>
+
+<h2>Interfaces Affected</h2>
+<ul>
+  <li>
+    <strong>INT-006 — Hold Option API</strong> (MuleSoft / B2C Website / CDP)<br/>
+    The MuleSoft INT-006 Hold Option integration is updated to populate four additional optional fields (shipCode, cabinCategoryCode, itineraryDescription, cruiseLength) in the CDP event payload it fires upon a successful hold option creation.
+  </li>
+  <li>
+    <strong>A070 — CDP Event Request</strong> (downstream / CDP)<br/>
+    A070 is the downstream request from INT-006 to CDP that delivers the Hold Option event. The A070 payload is extended to include the four new optional fields.
+  </li>
+</ul>
+
+<h2>Rationale</h2>
+<ul>
+  <li>The current Hold Option CDP event lacks sufficient data for Cheetah email templates to render personalised content (ship name reference, cabin type, itinerary summary, cruise duration).</li>
+  <li>CRM and Marketing teams require these fields to produce customer-facing Hold Option emails that include meaningful cruise details.</li>
+  <li>All four required fields are available from data sources already in the INT-006 flow, minimising the cost and risk of this change.</li>
+  <li>The Cheetah formula logic for conditionally displaying content based on cruise length (e.g. short-haul vs. long-haul messaging) depends on the cruiseLength field being present in the CDP event.</li>
+</ul>
+
+<h2>Resources &amp; Dependencies</h2>
+<ul>
+  <li><strong>INT-006 Interface Agreement (INT006V3)</strong> — <a href="https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4800413697/IA+INT006V3+-+Hold+Option">https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4800413697/IA+INT006V3+-+Hold+Option</a></li>
+</ul>
+
+<h2>Acceptance Criteria</h2>
+
+<p>
+  <strong>GIVEN</strong> a valid Hold Option creation request is received by INT-006 with a Cruise ID of two or more characters, and the DTS Itinerary Details API returns a successful response<br/>
+  <strong>WHEN</strong> a POST request is made to the INT-006 Hold Option API endpoint<br/>
+  <strong>THEN</strong> the API returns HTTP 200 (or 201 — [TO BE CONFIRMED]) and the CDP event payload contains all four additional fields: shipCode (first two characters of the Cruise ID), cabinCategoryCode (category code from the booking funnel payload), itineraryDescription (description string from DTS), and cruiseLength (integer number of nights from DTS) — all populated and not null.
+</p>
+
+<p>
+  <strong>GIVEN</strong> a valid Hold Option creation request is received by INT-006, and the DTS Itinerary Details API is unavailable or returns a timeout or error response<br/>
+  <strong>WHEN</strong> a POST request is made to the INT-006 Hold Option API endpoint<br/>
+  <strong>THEN</strong> the API still returns HTTP 200 (or 201), the hold option is created, and the CDP event is fired with shipCode and cabinCategoryCode populated; itineraryDescription and cruiseLength are absent or null. A failure entry is written to the MuleSoft application log including error type, Cruise ID, and timestamp.
+</p>
+
+<p>
+  <strong>GIVEN</strong> a valid Hold Option creation request is received by INT-006, and the DTS Itinerary Details API returns a response that omits the itineraryDescription or cruiseLength fields<br/>
+  <strong>WHEN</strong> INT-006 processes the DTS response<br/>
+  <strong>THEN</strong> the missing fields are set to null or absent in the CDP event payload — not populated with default or invented values. The hold option is created and the CDP event is fired without an unhandled exception.
+</p>
+
+<p>
+  <strong>GIVEN</strong> a Hold Option creation request containing one or more cabin category codes and the DTS Itinerary Details API returns a successful response<br/>
+  <strong>WHEN</strong> a POST request is made to the INT-006 Hold Option API endpoint<br/>
+  <strong>THEN</strong> the cabinCategoryCode field in the CDP event contains the category code(s) as a comma-separated string with no trailing separator (e.g. "IR1" for a single code, "IR1,BB" for multiple codes), consistent with the abandoned cart integration comma-separated format.
+</p>
+
+</body>
+</html>

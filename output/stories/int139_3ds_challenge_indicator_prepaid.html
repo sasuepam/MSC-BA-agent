@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Change Request — INT-139: 3DS Challenge Indicator for Prepaid Flow</title>
+</head>
+<body>
+
+  <h1>CR: INT-139 — 3DS Challenge Indicator for Prepaid Flow</h1>
+  <p>Interface: INT-139 | Initiative: Datatrans 3DS Secure Fields | Status: Draft</p>
+
+  <h2>Summary</h2>
+  <p>Introduce the <code>threeDSRequestorChallengeInd</code> parameter in the Datatrans init API call for the prepaid payment flow, setting it to <code>02</code> (frictionless preferred, no challenge requested) to reduce the elevated decline rate on prepaid transactions caused by unnecessary 3DS challenges.</p>
+
+  <h2>Change Scope</h2>
+  <ul>
+    <li>Add <code>threeDSRequestorChallengeInd = "02"</code> to the Datatrans init API request for prepaid flows only.</li>
+    <li>All other flows (booking funnel, MyMSC booking payments) must not send this parameter — Datatrans Secure Fields will continue to default to <code>04</code> for those flows.</li>
+    <li>No change required to the Secure Fields integration itself for non-prepaid flows (default behaviour is already <code>04</code>).</li>
+  </ul>
+
+  <h2>Interfaces Affected</h2>
+  <ul>
+    <li>
+      <strong>INT-139 — Datatrans Secure Fields (Prepaid Flow)</strong> (DTP / Datatrans)<br/>
+      Add <code>threeDSRequestorChallengeInd = "02"</code> in the Datatrans init API call when the transaction is identified as a prepaid payment. Parameter must be omitted for all non-prepaid flows.
+    </li>
+  </ul>
+
+  <h2>Rationale</h2>
+  <ul>
+    <li>Prepaid transactions are experiencing a high decline rate due to the Secure Fields integration triggering 3DS challenges at an elevated rate.</li>
+    <li>Datatrans have proposed setting <code>threeDSRequestorChallengeInd = "02"</code> (frictionless preferred) for prepaid flows to reduce unnecessary challenge prompts and lower the decline rate.</li>
+    <li>Scope is limited to the DTP project — 3DS Secure Fields is used exclusively for prepaid in this context.</li>
+  </ul>
+
+  <h2>Resources &amp; Dependencies</h2>
+  <ul>
+    <li><strong>Datatrans init API documentation</strong> — Datatrans — Reference for <code>threeDSRequestorChallengeInd</code> parameter values and behaviour</li>
+    <li><strong>Prepaid flow detection logic</strong> — DTP MuleSoft team — Confirm how the integration layer identifies a prepaid transaction to conditionally set the parameter [TO BE CONFIRMED]</li>
+  </ul>
+
+  <h2>Acceptance Criteria</h2>
+
+  <p>
+    <strong>GIVEN</strong> a customer initiates a prepaid payment through the DTP project<br/>
+    <strong>WHEN</strong> the Datatrans init API call is made<br/>
+    <strong>THEN</strong> the request includes <code>threeDSRequestorChallengeInd = "02"</code>
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> a customer initiates a booking funnel payment<br/>
+    <strong>WHEN</strong> the Datatrans init API call is made<br/>
+    <strong>THEN</strong> the request does NOT include the <code>threeDSRequestorChallengeInd</code> parameter, and Datatrans defaults to <code>04</code>
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> a customer initiates a MyMSC booking payment<br/>
+    <strong>WHEN</strong> the Datatrans init API call is made<br/>
+    <strong>THEN</strong> the request does NOT include the <code>threeDSRequestorChallengeInd</code> parameter, and Datatrans defaults to <code>04</code>
+  </p>
+
+  <p>
+    <strong>GIVEN</strong> the change is deployed to production<br/>
+    <strong>WHEN</strong> prepaid transactions are processed over a representative period<br/>
+    <strong>THEN</strong> the prepaid decline rate is measurably reduced compared to the pre-change baseline [threshold to be confirmed with Datatrans / business]
+  </p>
+
+</body>
+</html>

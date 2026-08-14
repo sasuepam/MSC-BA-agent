@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – Webform US: Status Match Agency Notification &amp; Contact Form Representative Code</title>
+</head>
+<body>
+
+<h1>Functional Specification – Webform US: Status Match Agency Notification &amp; Contact Form Representative Code</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>04/Jun/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>TLI-XXX – Webform US</td>
+    <td><a href="https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4741922817/TLI-XXX+-+Webform+US">https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4741922817/TLI-XXX+-+Webform+US</a></td>
+  </tr>
+  <tr>
+    <td>MuleSoft Scope – CR INT103 / INT101</td>
+    <td><a href="https://smartship.atlassian.net/browse/MDTTPU-6137">https://smartship.atlassian.net/browse/MDTTPU-6137</a></td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+  This feature covers two separate MuleSoft integration requests for the US market, both related to webforms in the MSCBook and B2B channels. The two requests span different web forms and different interfaces and are treated as independent deliverables.
+</p>
+<p>
+  <strong>Requirement 1 – Status Match Agency Email Notification (INT103):</strong> When a Travel Agency submits a Status Match form via MSCBook or B2B, no confirmation email is currently sent to the agency upon status match completion. The US market has requested that an optional Agency Email Address field be captured on the Status Match form, enabling Salesforce to send a completion notification email directly to the agency representative. The email address entered on the form may differ from the agency's registered master email; a dedicated form-level field is therefore required. INT103 will pass the submitted value (<code>agencyEmail__c</code>) to the Salesforce Case. Salesforce is responsible for sending the notification email using its internal email capability; expected volumes are low and within Salesforce platform allowances. An optional Representative Code field (<code>agencyRepresentativeId__c</code>) is also added to the Status Match form payload and passed through INT103 with no transformation; this field is included for future use and no immediate business process currently depends on it.
+</p>
+<p>
+  <strong>Requirement 2 – Contact Forms Representative Code (INT101):</strong> An optional Representative Code field (<code>agencyRepresentativeId__c</code>) is being added to the Help Center and Need Help form payloads (MSCBook and B2B channels) handled by INT101. INT101 will pass this field to the Salesforce Case as a pass-through with no transformation. The field is included for future use; no immediate business process currently depends on it.
+</p>
+<p>
+  Both requirements are scoped to the <strong>US market</strong> and relate to separate web forms: the Status Match form (Requirement 1 / INT103) and the Help Center / Need Help forms (Requirement 2 / INT101).
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a Travel Agency, I want to provide my email address when submitting a Status Match request via MSCBook so that I receive a confirmation notification when the status match for my client is completed.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a Travel Agency, I want to provide my Representative Code when submitting a Help Center or Need Help request via MSCBook so that my agency representative details are captured in Salesforce for future reference.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+
+<p><strong>Actors:</strong></p>
+<ul>
+  <li><strong>Travel Agency (TA)</strong> — submits the Status Match form or Help Center / Need Help form via MSCBook or B2B</li>
+  <li><strong>Salesforce</strong> — receives Case data from MuleSoft; sends agency notification email via internal capability</li>
+  <li><strong>INT103</strong> — MuleSoft interface for MSC Book Status Match and B2B Status Match; passes <code>agencyEmail__c</code> and <code>agencyRepresentativeId__c</code> to Salesforce Case</li>
+  <li><strong>INT101</strong> — MuleSoft interface for MSC Book Help Center &amp; Need Help Forms and B2B Contact Requests; passes <code>agencyRepresentativeId__c</code> to Salesforce Case</li>
+</ul>
+
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+  </tr>
+
+  <!-- UC-001: INT103 — Status Match form with Agency Email Address provided -->
+  <tr>
+    <td>UC-001</td>
+    <td>The Travel Agency has provided an Agency Email Address on the Status Match form.</td>
+    <td>Travel Agency; INT103; Salesforce</td>
+    <td>Travel Agency submits Status Match form with Agency Email Address</td>
+    <td>
+      1. Travel Agency submits the Status Match form (MSCBook or B2B) providing an Agency Email Address and optionally a Representative Code.<br/>
+      2. INT103 receives the form payload and includes <code>agencyEmail__c</code> and <code>agencyRepresentativeId__c</code> in the Salesforce Case creation request.<br/>
+      3. Salesforce creates the Case with both fields populated.<br/>
+      4. Salesforce sends a notification email to the Agency Email Address upon status match completion.
+    </td>
+  </tr>
+
+  <!-- UC-002: INT103 — Status Match form with no Agency Email Address -->
+  <tr>
+    <td>UC-002</td>
+    <td>The Travel Agency has NOT provided an Agency Email Address on the Status Match form.</td>
+    <td>Travel Agency; INT103; Salesforce</td>
+    <td>Travel Agency submits Status Match form without Agency Email Address</td>
+    <td>
+      1. Travel Agency submits the Status Match form without providing an Agency Email Address.<br/>
+      2. INT103 receives the payload without <code>agencyEmail__c</code> and processes the request without error.<br/>
+      3. Salesforce creates the Case without the agency email field.<br/>
+      4. No agency notification email is sent.
+    </td>
+  </tr>
+
+  <!-- UC-003: INT101 — Help Center / Need Help form with Representative Code -->
+  <tr>
+    <td>UC-003</td>
+    <td>The Travel Agency has provided a Representative Code on the Help Center or Need Help form.</td>
+    <td>Travel Agency; INT101; Salesforce</td>
+    <td>Travel Agency submits Help Center or Need Help form with Representative Code</td>
+    <td>
+      1. Travel Agency submits the Help Center or Need Help form (MSCBook or B2B) providing a Representative Code.<br/>
+      2. INT101 receives the form payload and includes <code>agencyRepresentativeId__c</code> in the Salesforce Case creation request (pass-through, no transformation).<br/>
+      3. Salesforce creates the Case with the field populated.
+    </td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — SLA, security, throughput,
+            error handling, retry policy, availability.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-004</td>
+    <td>INT103, INT101</td>
+    <td>All MuleSoft interface changes are scoped to the US market. No HQ-specific changes are in scope unless separately confirmed.</td>
+    <td>Compliance</td>
+    <td>High</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+
+  <!-- UC-001: INT103 happy path — Agency Email and Rep Code present -->
+  <tr>
+    <td>UC-001</td>
+    <td>
+      HAPPY PATH – INT103 receives Status Match payload with <code>agencyEmail__c</code> and <code>agencyRepresentativeId__c</code><br/><br/>
+      Given a Travel Agency submits the Status Match form with an Agency Email Address and a Representative Code<br/>
+      When INT103 processes the payload<br/>
+      Then <code>agencyEmail__c</code> and <code>agencyRepresentativeId__c</code> are present in the Salesforce Case<br/>
+      And no transformation is applied to either field
+    </td>
+    <td>
+      Both <code>agencyEmail__c</code> and <code>agencyRepresentativeId__c</code> are stored in the Salesforce Case with the values submitted on the form. No data loss, truncation, or transformation occurs.
+    </td>
+    <td>Status Match form payload with valid <code>agencyEmail__c</code> and <code>agencyRepresentativeId__c</code> values. Representative Code allowed values are [TO BE CONFIRMED].</td>
+  </tr>
+
+  <!-- UC-002: INT103 — Agency Email absent -->
+  <tr>
+    <td>UC-002</td>
+    <td>
+      HAPPY PATH – INT103 receives Status Match payload without <code>agencyEmail__c</code><br/><br/>
+      Given a Travel Agency submits the Status Match form without an Agency Email Address<br/>
+      When INT103 processes the payload<br/>
+      Then INT103 processes the request successfully without error<br/>
+      And no agency notification email is sent by Salesforce
+    </td>
+    <td>
+      INT103 processes the payload without error when <code>agencyEmail__c</code> is absent. No downstream errors occur. No agency email is triggered.
+    </td>
+    <td>Status Match form payload with <code>agencyEmail__c</code> omitted.</td>
+  </tr>
+
+  <!-- UC-003: INT101 happy path — Rep Code present -->
+  <tr>
+    <td>UC-003</td>
+    <td>
+      HAPPY PATH – INT101 receives Help Center / Need Help payload with <code>agencyRepresentativeId__c</code><br/><br/>
+      Given a Travel Agency submits a Help Center or Need Help form with a Representative Code<br/>
+      When INT101 processes the payload<br/>
+      Then <code>agencyRepresentativeId__c</code> is present in the Salesforce Case<br/>
+      And no transformation is applied to the field
+    </td>
+    <td>
+      <code>agencyRepresentativeId__c</code> is stored in the Salesforce Case with the value submitted on the form. No data loss, truncation, or transformation occurs.
+    </td>
+    <td>Help Center / Need Help form payload with a valid <code>agencyRepresentativeId__c</code> value. Representative Code allowed values are [TO BE CONFIRMED].</td>
+  </tr>
+
+</table>
+
+</body>
+</html>

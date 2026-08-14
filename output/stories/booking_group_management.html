@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BA Stories – Booking Group Management</title>
+</head>
+<body>
+
+<h1>BA Stories – Booking Group Management</h1>
+
+<h2>Splitting Rationale</h2>
+<p>
+  Two Change Requests are raised for this feature. Each CR maps to a distinct integration stream, a separate Jira ticket, a different source system, and a different downstream target. CR-1 covers a synchronous webform-to-Salesforce interface (INT101), while CR-2 covers an asynchronous event pipeline from DTS Booking Events to CDP spanning three closely related interfaces (INT024.1, INT100, INT025). The three interfaces in CR-2 are consolidated into a single CR because they carry the same change — adding the <code>GroupType</code> field to the BookingContext forwarded to CDP — and share a common DTS source event, a common downstream target, and a single Jira ticket (MDTTPU-6140). Separating them would produce three near-identical CRs with no additional clarity.
+</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Story</th><th>Scope</th><th>Reason for separation (or consolidation)</th></tr>
+  <tr>
+    <td>CR-1: INT101 – Add Group ID to Webform Case Creation</td>
+    <td>INT101 – MSC Book webform to Salesforce Case creation. Accepts and forwards the new optional <code>groupId</code> field.</td>
+    <td>Separate CR: different source system (MSC Book), different target (Salesforce), separate Jira ticket (MDTTPU-8133), synchronous request/response pattern.</td>
+  </tr>
+  <tr>
+    <td>CR-2: Booking Events – Add GroupType to BookingContext (INT024.1, INT100, INT025)</td>
+    <td>INT024.1, INT100, INT025 – DTS Booking Events to CDP. Accepts and forwards the new <code>GroupType</code> field within BookingContext.</td>
+    <td>Consolidated into one CR: same change (forward <code>GroupType</code> from DTS to CDP), same source event, same downstream target, single Jira ticket (MDTTPU-6140). Three interfaces are affected but the change is additive and uniform across all three.</td>
+  </tr>
+</table>
+
+
+<h2>CR: INT101 – Add Group ID to Webform Case Creation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Type</td><td>CR</td></tr>
+  <tr><td>Jira Ticket</td><td>MDTTPU-8133</td></tr>
+  <tr><td>Summary</td><td>INT101 – Add Group ID to Webform Case Creation: accept and forward the new optional <code>groupId</code> field from MSC Book Help Center, Need Help, and Group Request webforms to Salesforce Case creation.</td></tr>
+  <tr>
+    <td>Change Scope</td>
+    <td>
+      Interface INT101 (MSC Book &rarr; MuleSoft &rarr; Salesforce). MuleSoft changes:
+      <ul>
+        <li>Accept the new optional field <code>groupId</code> (string, max 255 characters, character format [TO BE CONFIRMED]) in the inbound INT101 request payload from MSC Book.</li>
+        <li>Validate the field: if present, reject requests where <code>groupId</code> exceeds 255 characters or fails character-format validation [TO BE CONFIRMED] with an appropriate error response to MSC Book.</li>
+        <li>Map and forward <code>groupId</code> to Salesforce field <code>groupId__c</code> on the Case creation request. If absent from the inbound payload, the field is omitted (null) in the outbound Salesforce request.</li>
+        <li>Scope applies to DTP rolled-out markets only (Ireland, UK, DACH, MED+Latam, US). Non-DTP markets continue on the existing path unchanged.</li>
+        <li>Existing INT101 behaviour (case creation, agency/customer lookup, caseId response, Genesys routing trigger) is unchanged.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>Rationale</td>
+    <td>Travel Agency users submit Help Center, Need Help, and Group Request forms on MSC Book without the Group ID being automatically captured on the resulting Salesforce Case. Contact centre agents are forced to manually look up the Group ID from DTS, adding handling effort and introducing risk of error. This change closes that gap by passing the <code>groupId</code> entered on the form through INT101 to Salesforce, so agents have immediate visibility of the group booking identifier on the Case record.</td>
+  </tr>
+  <tr><td>Mule Specification Document</td><td></td></tr>
+  <tr><td>High Level Architecture Document</td><td></td></tr>
+  <tr><td>API Documentation</td><td></td></tr>
+  <tr>
+    <td>Confluence Page</td>
+    <td>
+      TLI-XXX – Booking Group Management:
+      https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4800675945/TLI-XXX+-+Booking+Group+Management
+    </td>
+  </tr>
+  <tr>
+    <td>Interface Agreement(s)</td>
+    <td>
+      IA INT101 – MSC Book Help Center &amp; Need Help Forms:
+      https://msccruises.atlassian.net/wiki/spaces/DTP/pages/3867836498/IA+INT101+-+MSC+Book+-+Help+Center+Need+Help+Forms
+    </td>
+  </tr>
+</table>
+
+<h3>Acceptance Criteria</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Given</th><th>When</th><th>Then</th></tr>
+
+  <tr>
+    <td>A valid INT101 webform request is received from MSC Book for a DTP rolled-out market, and the payload contains a <code>groupId</code> value within the permitted length and character format [TO BE CONFIRMED]</td>
+    <td>MuleSoft INT101 processes the request</td>
+    <td>MuleSoft forwards the request to Salesforce with <code>groupId</code> mapped to <code>groupId__c</code>, and returns HTTP 204 with no body to MSC Book</td>
+  </tr>
+
+  <tr>
+    <td>A valid INT101 webform request is received from MSC Book for a DTP rolled-out market, and the payload does not contain a <code>groupId</code> field</td>
+    <td>MuleSoft INT101 processes the request</td>
+    <td>MuleSoft forwards the request to Salesforce without the <code>groupId__c</code> field (field is absent or null), and returns HTTP 204 with no body to MSC Book. No error is raised due to the absence of the field.</td>
+  </tr>
+
+  <tr>
+    <td>A valid INT101 webform request is received from MSC Book for a DTP rolled-out market, and the <code>groupId</code> value in the payload exceeds 255 characters</td>
+    <td>MuleSoft INT101 attempts to process the request</td>
+    <td>MuleSoft rejects the request before forwarding to Salesforce and returns an error response to MSC Book identifying <code>groupId</code> as invalid due to exceeding the maximum permitted length. No case is created in Salesforce.</td>
+  </tr>
+
+  <tr>
+    <td>A valid INT101 webform request is received from MSC Book for a DTP rolled-out market and contains a valid <code>groupId</code>, but the Salesforce endpoint is unavailable</td>
+    <td>MuleSoft INT101 attempts to forward the request to Salesforce and exhausts all configured retries</td>
+    <td>MuleSoft returns an error response to MSC Book indicating the downstream service is unavailable. No partial case is created.</td>
+  </tr>
+
+  <tr>
+    <td>An INT101 webform request is received from MSC Book for a non-DTP market</td>
+    <td>MuleSoft INT101 processes the request</td>
+    <td>MuleSoft routes the request via the existing non-DTP path, unchanged. The <code>groupId</code> field, if present, is ignored and not forwarded. Existing behaviour is preserved.</td>
+  </tr>
+
+</table>
+
+
+<h2>CR: Booking Events – Add GroupType to BookingContext (INT024.1, INT100, INT025)</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Type</td><td>CR</td></tr>
+  <tr><td>Jira Ticket</td><td>MDTTPU-6140</td></tr>
+  <tr><td>Summary</td><td>Booking Events – Add GroupType to BookingContext: accept and forward the new <code>GroupType</code> field from DTS Booking Events to CDP across INT024.1, INT100, and INT025.</td></tr>
+  <tr>
+    <td>Change Scope</td>
+    <td>
+      Interfaces INT024.1 (Booking Event Subset Legacy Orchestration), INT100 (Booking Profile Orchestration), and INT025 (Booking Event Orchestration) — all receiving DTS Booking Events and publishing to CDP. MuleSoft changes across all three interfaces:
+      <ul>
+        <li>Accept the extended DTS Booking Event payload that includes the new optional <code>GroupType</code> field within the booking context, once DTS delivers the event extension [TO BE CONFIRMED — DTS delivery date].</li>
+        <li>Map and forward <code>GroupType</code> to the corresponding field in the CDP target schema for each interface: A007 (INT024.1), A086 (INT100), A087 (INT025). Target field paths [TO BE CONFIRMED].</li>
+        <li>For group bookings (booking type GRP): <code>GroupType</code> is present in the DTS event and must be included in the payload forwarded to CDP.</li>
+        <li>For individual bookings (booking type IND): <code>GroupType</code> is absent or null in the DTS event. MuleSoft must process the event normally without error and not include the field in the CDP payload (or forward it as null, per CDP schema requirements [TO BE CONFIRMED]).</li>
+        <li>Existing orchestration logic for each interface (event subset filtering, GoldenID enrichment in INT024.1, participant splitting and filtering, booking profile generation in INT100, item/participant filtering in INT025) is unchanged.</li>
+        <li>The change is additive and backward-compatible. Existing CDP consumers and other downstream consumers that do not process <code>GroupType</code> must not be affected.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td>Rationale</td>
+    <td>Booking events published by DTS to downstream consumers do not currently carry information about whether a booking is a group or individual booking. Downstream systems such as CDP (Adobe Customer Data Platform) cannot distinguish between group and individual bookings for segmentation and marketing activation purposes. This change extends the booking event payload forwarded to CDP to include <code>GroupType</code>, allowing CDP and other authorised consumers to correctly identify and segment group bookings. The change is additive and does not affect existing consumers.</td>
+  </tr>
+  <tr><td>Mule Specification Document</td><td></td></tr>
+  <tr><td>High Level Architecture Document</td><td></td></tr>
+  <tr><td>API Documentation</td><td></td></tr>
+  <tr>
+    <td>Confluence Page</td>
+    <td>
+      TLI-XXX – Booking Group Management:
+      https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4800675945/TLI-XXX+-+Booking+Group+Management
+    </td>
+  </tr>
+  <tr>
+    <td>Interface Agreement(s)</td>
+    <td>
+      IA INT024.1 – Booking Event Subset Legacy Orchestration:
+      https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4288413802/IA+INT024.1+-+Booking+Event+Subset+Legacy+Orchestration
+      <br/><br/>
+      IA INT100 – Booking Profile Orchestration:
+      https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4321804290/IA+INT100+-+Booking+Profile+Orchestration
+      <br/><br/>
+      IA INT025 – Booking Event Orchestration:
+      https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4322230273/IA+INT025+-+Booking+Event+Orchestration
+    </td>
+  </tr>
+</table>
+
+<h3>Acceptance Criteria</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Given</th><th>When</th><th>Then</th></tr>
+
+  <!-- INT024.1 happy path -->
+  <tr>
+    <td>A DTS BK_CREATION_EVENT (or other applicable booking event type) for a group booking (type GRP) is published to Kafka topic R024 with <code>GroupType</code> populated</td>
+    <td>MuleSoft INT024.1 receives the event, applies the event subset filter, performs GoldenID enrichment where required, and splits the event per participant</td>
+    <td>MuleSoft INT024.1 forwards the event to CDP (schema A007) with <code>GroupType</code> included and correctly mapped to the target field path [TO BE CONFIRMED]. At least one split participant record meeting the Minimum Minor Age criteria with a valid GoldenID is forwarded successfully.</td>
+  </tr>
+
+  <!-- INT024.1 backward compatibility -->
+  <tr>
+    <td>A DTS booking event for an individual booking (type IND) is published to Kafka topic R024 without the <code>GroupType</code> field</td>
+    <td>MuleSoft INT024.1 receives and processes the event through the standard orchestration flow</td>
+    <td>MuleSoft INT024.1 forwards the event to CDP without <code>GroupType</code> in the payload. No error is raised due to the absence of the field. Existing orchestration behaviour is unchanged.</td>
+  </tr>
+
+  <!-- INT100 happy path -->
+  <tr>
+    <td>A DTS booking event for a group booking (type GRP) is published and INT100 receives the event subset with <code>GroupType</code> populated</td>
+    <td>MuleSoft INT100 applies participant filtering and generates the booking profile per participant</td>
+    <td>MuleSoft INT100 forwards the booking profile to CDP (schema A086) with <code>GroupType</code> included and correctly mapped to the target field path [TO BE CONFIRMED].</td>
+  </tr>
+
+  <!-- INT100 backward compatibility -->
+  <tr>
+    <td>A DTS booking event for an individual booking (type IND) is received by INT100 without the <code>GroupType</code> field</td>
+    <td>MuleSoft INT100 processes the event through the standard booking profile orchestration flow</td>
+    <td>MuleSoft INT100 forwards the booking profile to CDP without <code>GroupType</code>. No error is raised. Existing orchestration behaviour is unchanged.</td>
+  </tr>
+
+  <!-- INT025 happy path -->
+  <tr>
+    <td>A DTS booking event for a group booking (type GRP) is published and INT025 receives the event subset with <code>GroupType</code> populated</td>
+    <td>MuleSoft INT025 applies item and participant filtering</td>
+    <td>MuleSoft INT025 forwards the event to CDP (schema A087) with <code>GroupType</code> included and correctly mapped to the target field path [TO BE CONFIRMED].</td>
+  </tr>
+
+  <!-- INT025 backward compatibility -->
+  <tr>
+    <td>A DTS booking event for an individual booking (type IND) is received by INT025 without the <code>GroupType</code> field</td>
+    <td>MuleSoft INT025 processes the event through the standard orchestration flow</td>
+    <td>MuleSoft INT025 forwards the event to CDP without <code>GroupType</code>. No error is raised. Existing orchestration behaviour is unchanged.</td>
+  </tr>
+
+  <!-- Cross-interface: existing consumers not affected -->
+  <tr>
+    <td>A DTS booking event containing the new <code>GroupType</code> field is processed by INT024.1, INT100, or INT025</td>
+    <td>The event is forwarded to CDP and any other existing downstream consumers registered on the same topic</td>
+    <td>Existing downstream consumers that do not process <code>GroupType</code> continue to receive and process the event without error. The change is backward-compatible and no existing consumer integration is broken.</td>
+  </tr>
+
+</table>
+
+</body>
+</html>

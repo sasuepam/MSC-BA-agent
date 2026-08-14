@@ -120,80 +120,19 @@ Acceptance Criteria (BDD):
 
 Derive an `initiative-slug` from the spec filename or feature name (lowercase, hyphens, no spaces).
 
-Save the generated stories as a plain HTML file to:
-`C:\Users\[your_user]\MSC- Mule BA Agent\output\stories\<initiative-slug>.html`
+Save each generated story as a separate plain HTML file to:
+`output/stories/<initiative-slug>.html`
 
 The output must be plain HTML — **no `<style>` blocks, no inline `style=` attributes, no CSS classes, no external CSS or JS**. Use only `border="1" cellpadding="5" cellspacing="0"` on tables.
 
-Structure the HTML file as follows:
+### Output templates
 
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>BA Stories – [FEATURE NAME]</title>
-</head>
-<body>
+**Always read the template files before generating output.** The templates are located at:
 
-<h1>BA Stories – [FEATURE NAME]</h1>
+- **CR template:** `knowledge/templates/change_request_template.html`
+- **User Story template:** `knowledge/templates/user_story_template.html`
 
-<h2>Splitting Rationale</h2>
-<p>[Explain how stories were grouped and any ADF interfaces excluded.]</p>
-<table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Story</th><th>Scope</th><th>Reason for separation (or consolidation)</th></tr>
-  <tr><td>[CR-1 or US-1]</td><td>[scope summary]</td><td>[reason]</td></tr>
-</table>
-
-<!-- Repeat the block below for each CR -->
-<h2>CR: [Summary title]</h2>
-<table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Field</th><th>Value</th></tr>
-  <tr><td>Type</td><td>CR</td></tr>
-  <tr><td>Summary</td><td>[Jira-style title, max 10 words]</td></tr>
-  <tr><td>Change Scope</td><td>[specific technical detail]</td></tr>
-  <tr><td>Rationale</td><td>[business reason]</td></tr>
-  <tr><td>MuleSoft Requirements Page</td><td>[link or TO BE CONFIRMED]</td></tr>
-  <tr><td>High Level Architecture Document</td><td>[link or TO BE CONFIRMED]</td></tr>
-  <tr><td>API Documentation</td><td>[link or TO BE CONFIRMED]</td></tr>
-  <tr><td>Confluence Page</td><td>[link or TO BE CONFIRMED]</td></tr>
-</table>
-<h3>Acceptance Criteria</h3>
-<table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Scenario</th><th>Given</th><th>When</th><th>Then</th></tr>
-  <tr><td><strong>Scenario 1: [scenario name]</strong></td><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
-  <!-- Add a row per scenario; duplicate the row above for each additional scenario -->
-</table>
-
-<!-- Repeat the block below for each User Story -->
-<h2>User Story: [Summary title]</h2>
-<table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Field</th><th>Value</th></tr>
-  <tr><td>Type</td><td>User Story</td></tr>
-  <tr><td>Summary</td><td>[Jira-style title, max 12 words]</td></tr>
-  <tr><td>User Story Statement</td><td>As a [persona] I want [goal] so that [benefit]</td></tr>
-  <tr><td>Interface Name</td><td>[e.g. INT118 MyMSC: Web User Deactivation]</td></tr>
-  <tr><td>Purpose</td><td>[what this API does and who consumes it]</td></tr>
-  <tr><td>Users</td><td>[consuming system or end user]</td></tr>
-  <tr><td>Authentication</td><td>[authentication method]</td></tr>
-  <tr><td>Happy Path</td><td>[step-by-step main success flow]</td></tr>
-  <tr><td>Alternative Paths</td><td>[alternative scenarios]</td></tr>
-  <tr><td>Error Scenarios</td><td>[error cases and expected behaviour]</td></tr>
-  <tr><td>MuleSoft Requirements Page</td><td>[link or TO BE CONFIRMED]</td></tr>
-  <tr><td>High Level Architecture Document</td><td>[link or TO BE CONFIRMED]</td></tr>
-  <tr><td>API Documentation</td><td>[link or TO BE CONFIRMED]</td></tr>
-  <tr><td>Confluence Page</td><td>[link or TO BE CONFIRMED]</td></tr>
-</table>
-<h3>Acceptance Criteria</h3>
-<table border="1" cellpadding="5" cellspacing="0">
-  <tr><th>Scenario</th><th>Given</th><th>When</th><th>Then</th></tr>
-  <tr><td><strong>Scenario 1: [scenario name]</strong></td><td>[precondition]</td><td>[action]</td><td>[expected outcome]</td></tr>
-  <!-- Add a row per scenario; duplicate the row above for each additional scenario -->
-</table>
-
-</body>
-</html>
-```
+Read the relevant template file(s) using the Read tool, then populate each placeholder with content derived from the spec. Do not invent your own HTML structure — follow the template exactly, section by section.
 
 ---
 

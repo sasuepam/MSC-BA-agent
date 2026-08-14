@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – Hold Option Additional Event Fields in CDP</title>
+</head>
+<body>
+
+<h1>Functional Specification – Hold Option Additional Event Fields in CDP</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>12/Aug/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td>CRM2-11036</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>Jira Ticket – CRM2-11036 Hold Option Additional Event Fields</td>
+    <td>https://smartship.atlassian.net/browse/CRM2-11036</td>
+  </tr>
+  <tr>
+    <td>Meeting Notes – Hold Option INT-006 Additional Fields Alignment (23/Jul/2026)</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Meeting Notes – Hold Option Additional Event Fields Analysis (04/Aug/2026)</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>INT-006 Hold Option Integration Design</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>DTS Itinerary Details API Specification</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+  The Hold Option feature (INT-006) enables MSC website customers to reserve a cabin hold on a cruise booking through the B2C booking funnel. When a hold option is created, a CDP (Customer Data Platform) event is fired to support downstream CRM and marketing workflows — in particular, customer-facing email templates managed via Cheetah. Currently, the Hold Option CDP event contains insufficient data for these templates to render useful, personalised content.
+</p>
+<p>
+  This feature enriches the Hold Option CDP event with four additional fields: ship code, cabin category code, itinerary description, and cruise length. The ship code (derived from the first two letters of the Cruise ID) and cabin category code are sourced directly from the booking funnel data already available within INT-006. The itinerary description and cruise length are sourced from the DTS Itinerary Details API, which is already called (non-blocking) at the start of the INT-006 flow. The full port list was considered but deferred to a future iteration due to poor suitability for email templates (world cruises can have up to 55 ports). Ship name in full localised form was identified as a gap — it is not returned by the POST booking response and would require a dependency on DTS to extend that response; this is noted as an open item.
+</p>
+<p>
+  The change is scoped to the MuleSoft INT-006 integration. MuleSoft is responsible for populating the additional fields in the CDP event payload. Business logic for mapping ship code to full ship name, and any localisation of field values for email templates, is handled downstream by the CDP/Cheetah layer and is out of scope for MuleSoft. Cabin category code is sent as-is (comma-separated if multi-cabin, though multi-cabin bookings are not yet live on the website UI).
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a CRM/Marketing team member I want the Hold Option CDP event to include the ship code so that downstream email templates can display ship-related information to the customer.</td>
+    <td>The ship code is derived from the first two letters of the Cruise ID, which is already available in the INT-006 flow. Full ship name is not available from the POST booking response; mapping ship code to full name is the responsibility of the downstream CDP/Cheetah layer. A dependency on DTS to extend the POST booking response with ship name has been identified as an open item.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a CRM/Marketing team member I want the Hold Option CDP event to include the cabin category code so that downstream email templates can reference the customer's selected cabin category.</td>
+    <td>The cabin category code (e.g. IR1, BB) is available from the B2C/website booking funnel. Full localised category description is not available from DTS and is therefore out of scope for MuleSoft. Multiple category codes are comma-separated (consistent with the abandoned cart integration). Multi-cabin bookings are not yet live on the website UI, so currently a single code is always sent.</td>
+  </tr>
+  <tr>
+    <td>BR-003</td>
+    <td>As a CRM/Marketing team member I want the Hold Option CDP event to include the itinerary description so that downstream email templates can display a concise summary of the cruise itinerary.</td>
+    <td>The itinerary description is a short string returned by the DTS Itinerary Details API, which is already called non-blocking at the start of INT-006. If the itinerary API call fails, the hold option event must still be sent; the itinerary description field will be absent or null in that case. Full port list is excluded from scope for this iteration.</td>
+  </tr>
+  <tr>
+    <td>BR-004</td>
+    <td>As a CRM/Marketing team member I want the Hold Option CDP event to include the cruise length so that downstream Cheetah formula logic can conditionally display content based on the number of nights.</td>
+    <td>Cruise length (number of nights) is available from the DTS Itinerary Details API response. As with the itinerary description, if the itinerary API call fails the field may be absent or null and the event must still be sent.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>
+      A customer has completed the Hold Option selection on the B2C website booking funnel.
+      The Cruise ID is available in the request payload processed by INT-006.
+      The DTS Itinerary Details API is reachable and returns a successful response.
+    </td>
+    <td>B2C Website / Booking Funnel, INT-006 Hold Option MuleSoft Integration, DTS Itinerary Details API, CDP</td>
+    <td>Hold Option event fired with all four additional fields populated (happy path)</td>
+    <td>
+      1. The B2C website triggers a hold option creation, which is received by the INT-006 Hold Option API (MuleSoft experience API).
+      2. INT-006 extracts the ship code from the first two characters of the Cruise ID.
+      3. INT-006 extracts the cabin category code from the booking funnel payload. If multiple cabin codes are present, they are concatenated as a comma-separated string.
+      4. INT-006 calls the DTS Itinerary Details API (non-blocking) using the Cruise ID. On success, INT-006 extracts the itinerary description and cruise length from the response.
+      5. INT-006 constructs the Hold Option CDP event payload, including the four additional fields: ship code, cabin category code, itinerary description, and cruise length.
+      6. INT-006 fires the enriched CDP event to the CDP platform.
+      7. CDP receives the event with all four additional fields populated.
+    </td>
+    <td>Is the itinerary description field from DTS localised by market/language code? Remo Meng to confirm with DTS. What is the DTS Itinerary Details API failure rate? Remo Meng to check if stats can be provided.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>
+      A customer has completed the Hold Option selection on the B2C website booking funnel.
+      The Cruise ID is available in the request payload processed by INT-006.
+      The DTS Itinerary Details API call fails (e.g. timeout or error).
+    </td>
+    <td>B2C Website / Booking Funnel, INT-006 Hold Option MuleSoft Integration, DTS Itinerary Details API (failed), CDP</td>
+    <td>Hold Option event fired without itinerary-sourced fields when DTS Itinerary Details API call fails</td>
+    <td>
+      1. The B2C website triggers a hold option creation, which is received by the INT-006 Hold Option API (MuleSoft experience API).
+      2. INT-006 extracts the ship code from the first two characters of the Cruise ID.
+      3. INT-006 extracts the cabin category code from the booking funnel payload.
+      4. INT-006 attempts to call the DTS Itinerary Details API (non-blocking). The call fails (timeout or error response).
+      5. INT-006 logs the failure but continues processing; the hold option is still created.
+      6. INT-006 constructs the Hold Option CDP event payload with ship code and cabin category code populated, and itinerary description and cruise length absent or null.
+      7. INT-006 fires the partially-enriched CDP event to the CDP platform.
+      8. CDP receives the event; downstream email templates must handle absent itinerary description and cruise length gracefully.
+    </td>
+    <td>Is it acceptable to the business to send a Hold Option email template where itinerary description and cruise length are absent when the DTS API fails? Business confirmation required (noted in meeting 23/Jul/2026 as open question).</td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>
+      A customer has completed a multi-cabin Hold Option selection on the B2C website booking funnel (future state — not yet live on the website UI).
+      Multiple cabin category codes are present in the booking funnel payload.
+      The DTS Itinerary Details API is reachable and returns a successful response.
+    </td>
+    <td>B2C Website / Booking Funnel, INT-006 Hold Option MuleSoft Integration, DTS Itinerary Details API, CDP</td>
+    <td>Hold Option event fired with multiple cabin category codes in comma-separated format</td>
+    <td>
+      1. The B2C website triggers a hold option creation for a multi-cabin booking, received by the INT-006 Hold Option API (MuleSoft experience API).
+      2. INT-006 extracts the ship code from the first two characters of the Cruise ID.
+      3. INT-006 extracts multiple cabin category codes from the booking funnel payload and concatenates them as a comma-separated string (e.g. "IR1,BB"), consistent with the abandoned cart integration pattern.
+      4. INT-006 calls the DTS Itinerary Details API (non-blocking) and extracts itinerary description and cruise length on success.
+      5. INT-006 constructs and fires the enriched Hold Option CDP event with the comma-separated cabin category codes field.
+      6. CDP receives the event with the comma-separated cabin category code string.
+    </td>
+    <td>Multi-cabin Hold Option booking is not yet live on the website UI. When it becomes live, confirm that the comma-separated format is accepted by the CDP schema and Cheetah templates.</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — SLA, security, throughput,
+            error handling, retry policy, availability.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>INT-006 Hold Option API</td>
+    <td>The DTS Itinerary Details API call within INT-006 must remain non-blocking. A failure or timeout of the itinerary call must not prevent the hold option from being created or the CDP event from being fired.</td>
+    <td>Availability</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-002</td>
+    <td>INT-006 Hold Option API</td>
+    <td>The overall end-to-end processing time of INT-006 must not be materially increased by the addition of the four new fields. The itinerary API call is already in the flow; no new synchronous external calls are introduced by this change. SLA: [TO BE CONFIRMED]</td>
+    <td>Performance</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-003</td>
+    <td>INT-006 Hold Option API</td>
+    <td>When the DTS Itinerary Details API call fails, INT-006 must log the failure with sufficient detail (error type, Cruise ID, timestamp) to allow investigation. The event must still be sent to CDP with itinerary fields absent or null.</td>
+    <td>Auditability</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-004</td>
+    <td>INT-006 Hold Option API</td>
+    <td>The Hold Option CDP event payload must conform to the agreed CDP event schema, including the four new fields. Any schema validation failures must be logged and reported. CDP schema version to accommodate new fields: [TO BE CONFIRMED]</td>
+    <td>Compliance</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-005</td>
+    <td>INT-006 Hold Option API</td>
+    <td>Security requirements for the INT-006 API and the CDP event channel are unchanged by this feature. Existing authentication and authorisation mechanisms remain in place. Specific security controls: [TO BE CONFIRMED]</td>
+    <td>Security</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>NFR-006</td>
+    <td>INT-006 Hold Option API</td>
+    <td>Throughput and scalability requirements are unchanged by this feature — no new external API calls are introduced synchronously. Existing throughput SLA: [TO BE CONFIRMED]</td>
+    <td>Scalability</td>
+    <td>Medium</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+
+  <!-- UC-001: Happy Path -->
+  <tr>
+    <td>UC-001 – Happy Path</td>
+    <td>Given a valid Hold Option creation request with a Cruise ID that maps to an existing itinerary, and the DTS Itinerary Details API returns a successful response, When a POST request is made to the INT-006 Hold Option API endpoint, Then the API returns HTTP 200 (or 201) and the CDP event payload includes ship code, cabin category code, itinerary description, and cruise length all populated.</td>
+    <td>HTTP 200 (or 201 — [TO BE CONFIRMED]) is returned. The CDP event payload contains: shipCode equal to the first two characters of the Cruise ID; cabinCategoryCode equal to the category code from the request; itineraryDescription equal to the description string from DTS; cruiseLength equal to the integer number of nights from DTS. No fields are null or absent.</td>
+    <td>A valid Cruise ID for an existing itinerary with a known category code. DTS Itinerary Details API must be available and returning a response for the test Cruise ID. Confirm test environment DTS endpoint and credentials.</td>
+  </tr>
+
+  <!-- UC-001: Alternative Path – Single cabin code -->
+  <tr>
+    <td>UC-001 – Alternative Path: Single cabin category code</td>
+    <td>Given a Hold Option creation request containing exactly one cabin category code, When a POST request is made to the INT-006 Hold Option API endpoint and DTS returns successfully, Then the CDP event payload contains the cabinCategoryCode field as a single string (not comma-separated).</td>
+    <td>HTTP 200 (or 201) is returned. The cabinCategoryCode field in the CDP event contains a single code with no comma or trailing separator.</td>
+    <td>A valid Hold Option request with a single cabin category code (e.g. "IR1"). DTS Itinerary Details API available for the test Cruise ID.</td>
+  </tr>
+
+  <!-- UC-001: Error Scenario – Invalid Cruise ID format -->
+  <tr>
+    <td>UC-001 – Error Scenario: Cruise ID too short to extract ship code</td>
+    <td>Given a Hold Option creation request where the Cruise ID is less than two characters long, When a POST request is made to the INT-006 Hold Option API endpoint, Then the API handles the malformed input gracefully and returns an appropriate error response.</td>
+    <td>HTTP 400 is returned (or the integration's standard error response — [TO BE CONFIRMED]). The CDP event is not fired for this request. An error is logged in MuleSoft with the invalid Cruise ID and error detail.</td>
+    <td>A test request with a Cruise ID of zero or one character. Confirm expected error response format with INT-006 design documentation.</td>
+  </tr>
+
+  <!-- UC-002: Happy Path (DTS failure) -->
+  <tr>
+    <td>UC-002 – Happy Path: DTS Itinerary Details API call fails</td>
+    <td>Given a valid Hold Option creation request and the DTS Itinerary Details API is unavailable or returns an error/timeout, When a POST request is made to the INT-006 Hold Option API endpoint, Then the API still returns HTTP 200 (or 201), the hold option is created, and the CDP event is fired with ship code and cabin category code populated, and itinerary description and cruise length absent or null.</td>
+    <td>HTTP 200 (or 201) is returned by INT-006. The hold option is created successfully in the backend. The CDP event payload contains shipCode and cabinCategoryCode populated. The itineraryDescription and cruiseLength fields are absent or null. A failure entry for the DTS itinerary call is present in the MuleSoft application log, including error type, Cruise ID, and timestamp.</td>
+    <td>A valid Hold Option request Cruise ID. DTS Itinerary Details API endpoint simulated to return a timeout or 500-level error. Confirm test environment simulation approach for DTS failure.</td>
+  </tr>
+
+  <!-- UC-002: Alternative Path – DTS returns partial response -->
+  <tr>
+    <td>UC-002 – Alternative Path: DTS Itinerary Details API returns response missing itinerary description or cruise length</td>
+    <td>Given a valid Hold Option creation request and the DTS Itinerary Details API returns a response but without itinerary description or cruise length fields, When a POST request is made to the INT-006 Hold Option API endpoint, Then the API returns HTTP 200 (or 201), the hold option is created, and the CDP event is fired with missing itinerary fields set to null or absent.</td>
+    <td>HTTP 200 (or 201) is returned. The hold option is created. The CDP event is fired. Missing itinerary fields are null or absent — not populated with default or invented values. No unhandled exceptions in the MuleSoft flow.</td>
+    <td>A test DTS response payload with itinerary description or cruise length fields omitted. Confirm which fields are mandatory vs optional in the DTS Itinerary Details API response schema.</td>
+  </tr>
+
+  <!-- UC-003: Happy Path – Multi-cabin -->
+  <tr>
+    <td>UC-003 – Happy Path: Multi-cabin Hold Option (future state)</td>
+    <td>Given a Hold Option creation request containing multiple cabin category codes (future state), When a POST request is made to the INT-006 Hold Option API endpoint and DTS returns successfully, Then the CDP event payload contains the cabinCategoryCode field as a comma-separated string of all category codes.</td>
+    <td>HTTP 200 (or 201) is returned. The cabinCategoryCode field in the CDP event contains all category codes separated by commas with no trailing separator (e.g. "IR1,BB"). Consistent with the abandoned cart integration comma-separated format.</td>
+    <td>A test Hold Option request payload with two or more cabin category codes. This scenario requires multi-cabin Hold Option support to be available in the test environment — [TO BE CONFIRMED] when available.</td>
+  </tr>
+
+  <!-- UC-003: Error Scenario – CDP schema rejection of new fields -->
+  <tr>
+    <td>UC-001 / UC-002 / UC-003 – Error Scenario: CDP event schema validation failure for new fields</td>
+    <td>Given a Hold Option event payload that fails CDP schema validation due to incorrect type or unexpected value in one of the four new fields, When INT-006 fires the CDP event, Then the failure is captured and logged by MuleSoft and an alert or error record is raised.</td>
+    <td>The CDP event is not accepted. MuleSoft logs the schema validation error with field name, value, and Cruise ID. No unhandled exception escapes the INT-006 flow. The hold option creation is not rolled back as a result of the CDP schema failure — [TO BE CONFIRMED] with business/SA.</td>
+    <td>A CDP event payload with an invalid value in one of the four new fields (e.g. numeric value in a string field, or a field exceeding maximum length). Confirm CDP schema field definitions and validation rules for the four new fields — [TO BE CONFIRMED].</td>
+  </tr>
+
+</table>
+
+</body>
+</html>

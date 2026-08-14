@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – DataTrans US Cardholder Billing Data and AVS (B2C and M4M)</title>
+</head>
+<body>
+
+<h1>Functional Specification – DataTrans US Cardholder Billing Data and AVS (B2C and M4M)</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Sarah Suda</td>
+    <td>10/Aug/2026</td>
+    <td>Initial draft — generated from HLD/LLD meeting notes (Jul–Aug 2026)</td>
+    <td>Draft</td>
+    <td>MDTTPU-10897</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>Jira Ticket – MDTTPU-10897</td>
+    <td>https://smartship.atlassian.net/browse/MDTTPU-10897</td>
+  </tr>
+  <tr>
+    <td>ADR0059 – Extension of DataTrans authorize-split for US Cardholder Billing Data and AVS (Scenario A)</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/EA/pages/5450006612/ADR0059+-+Extension+of+Datatrans+authorize-split+for+US+Cardholder+Billing+Data+and+AVS</td>
+  </tr>
+  <tr>
+    <td>Booking Funnel Figma</td>
+    <td>https://www.figma.com/design/UUASRN3MkETwLZpmbXLGwS/Booking-Funnel-DT?node-id=94-7480</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+The MSC US website is migrating from SiteCore to the DTTP (Digital Transformation &amp; Technology Programme) platform. The current SiteCore implementation uses the DataTrans lightbox, which natively collects cardholder billing information (first name, last name, street, city, country, zip code) inline during the payment flow. This data is stored and visible in the DataTrans WebAdmin console, allowing the MSC US Finance team to perform manual fraud checks and Address Verification Service (AVS) checks. The DTTP architecture uses DataTrans Secure Fields, which does not natively capture billing address data, creating a gap between the current and target states.
+</p>
+<p>
+The selected approach (ADR0059, Scenario A) is to extend the DataTrans authorize-split API to accept a new cardholder object containing billing details. When a US or Puerto Rico customer completes a card payment via the B2C booking funnel or My Area, the front end collects the cardholder billing fields and passes them to MuleSoft. MuleSoft acts as a pure passthrough, forwarding the cardholder object in the authorize-split call to DataTrans. DataTrans stores this data in the WebAdmin console, restoring the billing data visibility that existed in SiteCore. Automatic AVS enforcement is out of scope for day one; at go-live the MSC US Finance team will perform manual AVS checks using the stored data. AVS automatic activation is deferred to a separate future backlog item.
+</p>
+<p>
+The solution is US- and Puerto Rico-specific at the front-end level. The Adobe/CMS configuration controls which markets surface the cardholder billing fields; MuleSoft applies no market-based logic and forwards whatever the front end provides. This design allows other markets (e.g. Italy, for a future 3DS cardholder enrichment requirement) to enable billing data collection without a new integration build. The US go-live target is 23/Sep/2026, with a dependency on DataTrans delivering the extended authorize-split API (sandbox and production) before end-to-end testing can be completed.
+</p>
+<p>
+<strong>Payment method scope:</strong> This change applies to card payments only (Secure Fields). Apple Pay and Google Pay are explicitly out of scope: DataTrans confirmed that for wallet payments, AVS is not required because the wallet provider (Apple/Google) already tokenises the card and authenticates the payer through device biometrics or passcode and their own fraud controls. The risk that AVS is intended to address is therefore already managed by the wallet. B2C does not need to send cardholder billing fields for wallet-based transactions, and MuleSoft will not receive or forward cardholder data for those payment paths.
+</p>
+<p>
+<strong>M4M (My MSC mobile) scope:</strong> M4M is in scope for this specification. For the M4M payment flow, cardholder billing data is collected on the M4M checkout screen and passed during transaction initialisation via INT187.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As the MSC US Finance team, I want cardholder billing details (first name, last name, street address, city, country, zip code) to be stored in the DataTrans WebAdmin console so that I can perform manual fraud prevention and AVS verification checks on US card transactions after migration to DTTP.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a US or Puerto Rico customer completing a card payment via the B2C booking funnel or My Area, I want to be able to enter my cardholder billing address so that my payment can be processed and my billing details are recorded for fraud-prevention purposes.</td>
+  </tr>
+  <tr>
+    <td>BR-003</td>
+    <td>As the MSC technology team, I want billing address collection to be configurable per market on the front end so that non-US markets are not impacted by this change and future markets can enable the same flow without a new integration build.</td>
+  </tr>
+  <tr>
+    <td>BR-004</td>
+    <td>As the MSC US Finance team, I want to be informed when a card payment transaction fails due to an AVS mismatch so that I can review the booking and follow up appropriately.</td>
+  </tr>
+  <tr>
+    <td>BR-006</td>
+    <td>As the MSC US technology team, I want wallet payments (Apple Pay, Google Pay) to be excluded from the cardholder billing data collection requirement so that the integration is not complicated by payment methods where AVS is already handled by the wallet provider.</td>
+  </tr>
+  <tr>
+    <td>BR-007</td>
+    <td>As a US or Puerto Rico customer completing a card payment via My MSC Mobile (M4M), I want to enter my cardholder billing address on the checkout screen so that my payment is processed and my billing details are recorded for fraud prevention purposes.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>Customer has reached the payment step in the US or Puerto Rico booking funnel. The front end (Adobe/CMS, US market config) has surfaced and collected cardholder billing fields on the checkout screen. The customer has entered first name, last name, street address, city, country (ISO 3166-1 alpha-2 dropdown), and zip code. DataTrans Secure Fields has initialised for card capture. The DataTrans authorize-split extended API (cardholder object support) is available.</td>
+    <td>US/Puerto Rico Customer</td>
+    <td>B2C US booking – cardholder billing data collected and forwarded (booking request)</td>
+    <td>
+      1. B2C Website calls the DataTrans Secure Fields SDK submit method for card tokenisation.<br>
+      2. B2C Website calls INT007 (booking request) with a POST request that includes the booking payload and an optional cardholder object containing: name, lastName, and a nested address object with addressLine1, city, country (ISO 3166-1 alpha-2), and postCode.<br>
+      3. INT007 maps the cardholder object and includes it in the authorize-split call to DataTrans (DT002).<br>
+      4. DataTrans stores the cardholder billing data in WebAdmin and returns an authorization confirmation.<br>
+      5. INT007 returns a successful booking response to B2C.
+    </td>
+    <td>Field structure agreed in LLD session (06/Aug/2026): cardholder object with fields <strong>name</strong>, <strong>lastName</strong>, and nested <strong>address</strong> object containing <strong>addressLine1</strong>, <strong>city</strong>, <strong>country</strong> (ISO 3166-1 alpha-2), <strong>postCode</strong>. Field character limits for name, lastName, addressLine1, city, and postCode to be confirmed from DataTrans API documentation [TO BE CONFIRMED]. AVS error response sample (full structure and acquirer-specific codes) to be provided by Julian (DataTrans) [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>Same as UC-001 but the customer is completing a booking of a pre-paid item. The DataTrans authorize-split extended API is available.</td>
+    <td>US/Puerto Rico Customer</td>
+    <td>B2C US pre-paid item booking – cardholder billing data collected and forwarded (book request for item)</td>
+    <td>
+      Same passthrough behaviour as UC-001, but using INT140 (book request for item) instead of INT007. INT140 includes the cardholder object in its authorize-split call to DataTrans.
+    </td>
+    <td>Field character limits (name, lastName, addressLine1, city, postCode) to be confirmed from DataTrans API docs [TO BE CONFIRMED]. AVS error response sample to be provided by Julian [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>Same as UC-001 but the flow reaches the finalized payment step of the cruise in MyMSC area. The DataTrans authorize-split extended API is available.</td>
+    <td>US/Puerto Rico Customer</td>
+    <td>B2C US finalized payment of the cruise in MyMSC area – cardholder billing data collected and forwarded</td>
+    <td>
+      Same passthrough behaviour as UC-001, but using INT146 (finalized payment) instead of INT007. INT146 includes the cardholder object in its authorize-split call to DataTrans.
+    </td>
+    <td>Same as UC-001.</td>
+  </tr>
+  <tr>
+    <td>UC-005</td>
+    <td>US or Puerto Rico M4M customer has reached the checkout screen. The M4M BFF has already made the first INT187 call to load the cart price (no cardholder data included in that call). The customer has entered billing fields on the checkout screen: name (first name), lastName, street address (addressLine1), city, country (ISO 3166-1 alpha-2), postCode. DataTrans Secure Fields is initialised for card capture. DataTrans init endpoint with customer object support is available (already natively supported — no extension required).</td>
+    <td>US/Puerto Rico M4M Customer</td>
+    <td>M4M US checkout – cardholder billing data collected on checkout screen and forwarded in pay-button INT187 call (transaction initialisation)</td>
+    <td>
+      1. M4M BFF makes the first INT187 call to load the cart price — no cardholder object is included in this call.<br>
+      2. Customer enters cardholder billing fields on the M4M checkout screen: name (first name), lastName, street address (addressLine1), city, country (ISO 3166-1 alpha-2 dropdown), postCode.<br>
+      3. Customer presses the pay button.<br>
+      4. M4M BFF makes the second INT187 call with the transaction payload and a customer object containing the cardholder billing fields.<br>
+      5. INT187 acts as a pure passthrough: it forwards the customer object in the DataTrans init call without transformation, enrichment, or market-based logic.<br>
+      6. DataTrans stores the cardholder billing data in WebAdmin and initialises the transaction.<br>
+      7. The payment authorization proceeds normally.<br>
+      Note: The DataTrans init endpoint already natively supports a customer object; no API extension is required from DataTrans for this path. Email and phone are NOT included in the customer object (day-one scope, consistent with B2C). INT188 (settle) is not impacted by this change.
+    </td>
+    <td>Customer object field names on the DataTrans init endpoint — to be confirmed against DataTrans init API docs. Expected to be consistent with the authorize-split customer/cardholder object, but not yet validated [TO BE CONFIRMED]. Non-US M4M market backward compatibility: does the M4M BFF currently send an INT187 call for non-US customers, and if so, will the customer object be optional on INT187? [TO BE CONFIRMED with M4M team]. M4M LLD field mapping session not yet held — specific INT187 payload structure and field mappings to be defined [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>UC-006</td>
+    <td>B2C US customer submits a card payment with cardholder billing data. DataTrans returns an AVS decline in the authorize-split response. Note: AVS automatic checks are NOT active at go-live (day one: manual checks only). This UC describes the future state once AVS auto-checks are activated via a separate backlog item.</td>
+    <td>US/Puerto Rico Customer</td>
+    <td>AVS decline – booking created, payment failed (future state post AVS activation)</td>
+    <td>
+      1. B2C Website calls INT007 (or INT140 / INT146) with cardholder object.<br>
+      2. MuleSoft forwards cardholder object in authorize-split call to DataTrans.<br>
+      3. DataTrans performs AVS check; acquirer returns AVS decline. DataTrans returns an error object: reason: "error", message: "declined by AVS check [acquirer-specific code]". Error codes vary by acquirer (e.g. Worldpay vs Worldline); MSC configuration can set match thresholds (e.g. partial address match accepted).<br>
+      4. MuleSoft receives the AVS error response and surfaces it to B2C.<br>
+      5. The booking is created but the payment fails. B2C thank-you page displays "booking created, transaction failed" message.<br>
+      Note: Pre-authorization before booking creation is not viable for the US market due to data-logging constraints. Authorization occurs post-booking creation.
+    </td>
+    <td>Full AVS error response structure and all acquirer-specific error codes to be confirmed — Julian (DataTrans) to provide a sample error response [TO BE CONFIRMED]. Needed to ensure unrecognized codes do not trigger false alerts in the MuleSoft integration layer. Full AVS error-handling flow flagged for future DTTP analysis.</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — SLA, security, throughput,
+            error handling, retry policy, availability.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>INT007, INT140, INT146, INT187</td>
+    <td>The cardholder/customer object must be fully optional on the integration layer. INT007, INT140, INT146, and INT187 must continue to process requests that do not include a cardholder/customer object without error or change in behaviour. Existing non-US market integrations and the first (cart price load) INT187 call from M4M must not be impacted.</td>
+    <td>Availability / Backward Compatibility</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-004</td>
+    <td>INT007, INT140, INT146</td>
+    <td>The country field within the cardholder address object must be an ISO 3166-1 alpha-2 two-letter code. No transformation is required by MuleSoft as this standard is already in use across existing API country fields. The front end must present a dropdown (not free text) for country to enforce the ISO format.</td>
+    <td>Data Quality</td>
+    <td>High</td>
+  </tr>
+
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+
+  <!-- UC-001: B2C US booking via INT007 with full cardholder object -->
+  <tr>
+    <td>UC-001</td>
+    <td>HAPPY PATH – POST to INT007 with valid US cardholder billing object (all fields populated).<br>Given: B2C sends a valid booking payload including a cardholder object with name, lastName, address.addressLine1, address.city, address.country="US", address.postCode.<br>When: INT007 is called.<br>Then: INT007 forwards the cardholder object in the authorize-split call to DataTrans; DataTrans returns authorization confirmation.</td>
+    <td>HTTP 200 returned by INT007. DataTrans authorize-split called with cardholder object. DataTrans stores billing data in WebAdmin. Booking created successfully.</td>
+    <td>Booking payload for a US card payment with all cardholder fields populated: valid name (first name), lastName, address.addressLine1 (US street address), address.city, address.country="US" (ISO 3166-1 alpha-2), address.postCode (valid US zip code).</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ALT PATH – POST to INT007 with Puerto Rico cardholder billing object (country="PR").<br>Given: Customer is booking with a Puerto Rico billing address; front end sends country="PR".<br>When: INT007 is called.<br>Then: INT007 passes country="PR" through to DataTrans without transformation.</td>
+    <td>HTTP 200 returned by INT007. DataTrans authorize-split called with country="PR" in cardholder object. Booking created successfully. No error or transformation applied to the PR country code by MuleSoft.</td>
+    <td>Booking payload for a Puerto Rico billing address: country="PR", valid Puerto Rico zip code, no state field required (Puerto Rico has no state in this context). Same card and booking data as the US happy path.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ALT PATH – POST to INT007 with partial cardholder object (optional fields omitted).<br>Given: B2C sends cardholder object containing only some fields (e.g. name, lastName, address.postCode; address.city and address.addressLine1 omitted).<br>When: INT007 is called.<br>Then: INT007 forwards the partial object to DataTrans as-is; no defaulting or enrichment applied.</td>
+    <td>HTTP 200 returned by INT007. DataTrans authorize-split called with partial cardholder object as received from B2C. MuleSoft does not add, default, or transform missing optional fields. Booking created successfully.</td>
+    <td>Booking payload with cardholder object containing only name, lastName, and address.postCode. All other fields omitted. Valid US booking scenario.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ERROR – POST to INT007 with cardholder object; DataTrans returns AVS decline (future state, post AVS activation).<br>Given: B2C sends valid US cardholder billing data; DataTrans returns AVS error in authorize-split response.<br>When: INT007 is called.<br>Then: INT007 surfaces the AVS error to B2C; booking is created but payment fails.</td>
+    <td>INT007 receives AVS error from DataTrans (reason: "error", message: "declined by AVS check [acquirer code]"). INT007 propagates the error to B2C without masking. Booking is created in OPT/confirmed status. Payment is not completed. B2C thank-you page displays "booking created, transaction failed." No false alert triggered in MuleSoft integration layer for the AVS error code.</td>
+    <td>Booking payload for a US card payment with cardholder billing address that will trigger an AVS mismatch in DataTrans sandbox. Requires DataTrans sandbox configuration to simulate AVS decline. AVS error code sample to be provided by Julian (DataTrans) [TO BE CONFIRMED].</td>
+  </tr>
+
+  <!-- UC-002: INT140 pre-paid item booking -->
+  <tr>
+    <td>UC-002</td>
+    <td>HAPPY PATH – POST to INT140 with valid US cardholder billing object.<br>Given: B2C sends pre-paid item booking request including cardholder object.<br>When: INT140 is called.<br>Then: INT140 forwards cardholder object in authorize-split call to DataTrans; DataTrans stores data and confirms authorization.</td>
+    <td>HTTP 200 returned by INT140. DataTrans authorize-split called with cardholder object. DataTrans stores billing data. Booking item created successfully. Behaviour identical to UC-001 happy path for INT007.</td>
+    <td>Add-on item booking payload for a US card payment with full cardholder fields. Same cardholder object structure as UC-001.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>ERROR – POST to INT140 with cardholder object; DataTrans returns AVS decline (future state, post AVS activation).<br>Given: DataTrans returns AVS decline for an item booking authorize-split call.<br>When: INT140 is called.<br>Then: INT140 surfaces AVS error to B2C; item booking created but payment fails.</td>
+    <td>Same acceptance criteria as UC-001 AVS decline error scenario, applied to INT140.</td>
+    <td>Same test data as UC-001 AVS error scenario, applied to an pre-paid item booking context [TO BE CONFIRMED with DataTrans sandbox].</td>
+  </tr>
+
+  <!-- UC-003: INT146 finalized payment -->
+  <tr>
+    <td>UC-003</td>
+    <td>HAPPY PATH – POST to INT146 with valid US cardholder billing object.<br>Given: B2C sends finalized payment request including cardholder object.<br>When: INT146 is called.<br>Then: INT146 forwards cardholder object in authorize-split call to DataTrans; DataTrans stores data and confirms authorization.</td>
+    <td>HTTP 200 returned by INT146. DataTrans authorize-split called with cardholder object. DataTrans stores billing data. Payment finalized successfully. Behaviour identical to UC-001 happy path for INT007.</td>
+    <td>Finalized payment payload for a US card payment with full cardholder fields. Same cardholder object structure as UC-001.</td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>ERROR – POST to INT146 with cardholder object; DataTrans returns AVS decline (future state, post AVS activation).<br>Given: DataTrans returns AVS decline for a finalized payment authorize-split call.<br>When: INT146 is called.<br>Then: INT146 surfaces AVS error to B2C; booking created but payment fails.</td>
+    <td>Same acceptance criteria as UC-001 AVS decline error scenario, applied to INT146.</td>
+    <td>Same test data as UC-001 AVS error scenario, applied to a finalized payment context [TO BE CONFIRMED with DataTrans sandbox].</td>
+  </tr>
+
+
+  <!-- UC-005: M4M – second INT187 call with cardholder data -->
+  <tr>
+    <td>UC-005</td>
+    <td>HAPPY PATH – M4M BFF makes second INT187 call (pay-button press) with customer billing object for a US customer.<br>Given: US/Puerto Rico M4M customer has entered billing fields on checkout screen; M4M BFF sends second INT187 call with customer object (name, lastName, address.addressLine1, address.city, address.country="US", address.postCode).<br>When: INT187 is called (second call).<br>Then: INT187 forwards the customer object in the DataTrans init call; DataTrans stores billing data and initialises the transaction.</td>
+    <td>HTTP 200 returned by INT187. DataTrans init called with customer object. DataTrans stores billing data in WebAdmin. Transaction initialised successfully. Payment authorization proceeds.</td>
+    <td>M4M second INT187 call payload for a US card payment with all cardholder fields populated: valid name (first name), lastName, address.addressLine1 (street), address.city, address.country="US", address.postCode (zip). Note: customer object field names on the DataTrans init endpoint to be confirmed — expected consistent with authorize-split [TO BE CONFIRMED].</td>
+  </tr>
+  <tr>
+    <td>UC-005</td>
+    <td>ALT PATH – M4M BFF makes first INT187 call (cart price load) without customer object.<br>Given: M4M BFF sends the first INT187 call to load cart price; no cardholder data included.<br>When: INT187 is called (first call).<br>Then: INT187 processes the call without a customer object; DataTrans init is called without a customer object; no error is raised.</td>
+    <td>HTTP 200 returned by INT187. DataTrans init called without customer object. Existing cart price load behaviour is unchanged. No regression to existing M4M flows.</td>
+    <td>Standard M4M first INT187 call payload (cart price load). No customer object included. Existing M4M regression test data.</td>
+  </tr>
+  <tr>
+    <td>UC-005</td>
+    <td>ALT PATH – M4M BFF makes second INT187 call with customer billing object for a Puerto Rico customer (country="PR").<br>Given: Puerto Rico M4M customer sends billing address with country="PR".<br>When: INT187 is called (second call).<br>Then: INT187 passes country="PR" through to DataTrans init without transformation.</td>
+    <td>HTTP 200 returned by INT187. DataTrans init called with country="PR" in customer object. No transformation applied by MuleSoft. Transaction initialised successfully.</td>
+    <td>M4M second INT187 call payload with Puerto Rico billing address: country="PR", valid Puerto Rico zip code.</td>
+  </tr>
+
+
+</table>
+
+</body>
+</html>

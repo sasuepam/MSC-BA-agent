@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – Free Balcony Upgrade: Same Price as Next Macro Category Indicator</title>
+</head>
+<body>
+
+<h1>Functional Specification – Free Balcony Upgrade: Same Price as Next Macro Category Indicator</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Sarah Suda</td>
+    <td>25/May/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>Business Story – Free Balcony Upgrades: Autoselection from Oceanview in BF</td>
+    <td>https://smartship.atlassian.net/browse/MDTTPU-2094</td>
+  </tr>
+  <tr>
+    <td>IA INT002.1v1.1 – Get price lists</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4248076289</td>
+  </tr>
+  <tr>
+    <td>IA INT002.2v1.1 – Get cabin types</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4249387009</td>
+  </tr>
+  <tr>
+    <td>IA INT002.3v1.1 – Get cabin preferences</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4249419777</td>
+  </tr>
+  <tr>
+    <td>IA INT002.4v1.1 – Get categories</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4249387137</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+The Free Balcony Upgrade promotion allows B2C customers who have selected an Oceanview cabin to receive a free upgrade to a Balcony cabin when the promotion is active. The promotion only applies when the price of the Balcony matches the price of the Oceanview — i.e. when a cabin category is priced the same as the next higher macro category. Without visibility of this pricing relationship, the booking funnel website cannot determine whether the upgrade condition is met and cannot offer or auto-apply the upgrade.
+</p>
+<p>
+This feature adds an indicator to the booking funnel search and category responses to surface whether the lowest price for a given cabin entry is equal to the price of the next macro category above it. The indicator is derived from the reservation system and must be converted to a boolean before being returned to the website. The website uses this flag to drive the auto-selection and upgrade prompt logic for the Free Balcony Upgrade feature.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As the booking funnel, I want to receive an indicator of whether the lowest price for a cabin entry matches the price of the next higher macro category so that the website can determine whether the Free Balcony Upgrade promotion applies and offer it to the customer.</td>
+    <td>The indicator must be included in the price list, cabin type, cabin preference, and category responses. The value must be derived from the reservation system and converted to a boolean. If absent in the reservation system response, it must default to false.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>A valid search or pricing request is made by the booking funnel at any step of the booking journey.</td>
+    <td>B2C Website (Booking Funnel), MuleSoft, DTS</td>
+    <td>Retrieve booking funnel search data including same-price-as-next-macro-category indicator</td>
+    <td>The website calls INT002.1 Get Price Lists, INT002.2 Get Cabin Types, INT002.3 Get Cabin Preferences, or INT002.4 Get Categories depending on the booking step. MuleSoft retrieves the data from DTS and, for each entry, reads the SamePriceAsNextMacroCategory field from the DTS response, converts it to a boolean, and maps it to the lowestPricedCategory of the relevant entry in the response (priceTypes, cabinTypes, cabinPreferences, or categories respectively). If the field is absent in the DTS response, MuleSoft defaults the value to false and returns the response without error.</td>
+    <td>—</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>INT002.1, INT002.2, INT002.3, INT002.4</td>
+    <td>The SamePriceAsNextMacroCategory value from DTS must be transformed to a boolean by MuleSoft before being included in the response. The transformation must result in true or false — no other value types are permitted.</td>
+    <td>Compliance</td>
+    <td>High</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>HAPPY PATH – SamePriceAsNextMacroCategory is true<br><br>
+    Given a valid request is made to INT002.1, INT002.2, INT002.3, or INT002.4 and DTS returns SamePriceAsNextMacroCategory as true for one or more entries<br>
+    When MuleSoft processes the DTS response<br>
+    Then the samePriceAsNextMacroCategory indicator is included in the lowestPricedCategory of the relevant entries with a boolean value of true</td>
+    <td>MuleSoft converts and maps the SamePriceAsNextMacroCategory value and returns true in the lowestPricedCategory for the relevant entries.</td>
+    <td>Search or pricing request for a cruise where DTS confirms the Balcony price equals the Oceanview price for at least one entry.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ALT PATH – SamePriceAsNextMacroCategory is false<br><br>
+    Given a valid request is made to INT002.1, INT002.2, INT002.3, or INT002.4 and DTS returns SamePriceAsNextMacroCategory as false for all entries<br>
+    When MuleSoft processes the DTS response<br>
+    Then the samePriceAsNextMacroCategory indicator is included in the lowestPricedCategory of each entry with a boolean value of false</td>
+    <td>MuleSoft converts and maps the SamePriceAsNextMacroCategory value and returns false in the lowestPricedCategory for all entries.</td>
+    <td>Search or pricing request for a cruise where DTS confirms the Balcony price does not equal the Oceanview price for any entry.</td>
+  </tr>
+</table>
+
+</body>
+</html>

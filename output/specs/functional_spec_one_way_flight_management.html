@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – One-Way Flight Management for Cruises</title>
+</head>
+<body>
+
+<h1>Functional Specification – One-Way Flight Management for Cruises</h1>
+
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>VERSION</th><th>AUTHOR(S)</th><th>DATE</th><th>REMARKS</th><th>STATUS</th><th>TICKETS</th></tr>
+  <tr>
+    <td>1</td>
+    <td>MSC Integration Architect Agent</td>
+    <td>19/May/2026</td>
+    <td>SA sections populated: Solution Overview, Involved Interfaces, Sequence Diagrams, Monitoring and Alerting Guidelines</td>
+    <td>Draft</td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Sarah Suda (Co-authored by MSC BA Agent)</td>
+    <td>20/May/2026</td>
+    <td>Updated BA sections: Reference Documentation, Feature Summary, Business Requirements, Use Cases, Non-Functional Requirements, Test Scenarios &amp; Acceptance Criteria</td>
+    <td>Draft</td>
+    <td>DTTP25-25492, DTTP25-21764, DTTP25-26726, DTTP25-29614, DTTP25-29615</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Sarah Suda</td>
+    <td>21/May/2026</td>
+    <td>Updates based on review</td>
+    <td>Latest</td>
+    <td></td>
+  </tr>
+</table>
+
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Document</th><th>Link</th></tr>
+  <tr>
+    <td>DTTP25-25492 – One-Way Flight Management (parent / epic)</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-25492</td>
+  </tr>
+  <tr>
+    <td>DTTP25-21764 – INT002.1 / INT002.2 / INT002.3 / INT002.4 – Expose airType in category search responses</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-21764</td>
+  </tr>
+  <tr>
+    <td>DTTP25-26726 – INT005.2 – Support one-way air packages in flight availability</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-26726</td>
+  </tr>
+  <tr>
+    <td>DTTP25-29614 – INT004.3 / INT004.4 – Forward airType to DTS in insurance and price requests</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-29614</td>
+  </tr>
+  <tr>
+    <td>DTTP25-29615 – INT006 / INT007 – Forward airType to DTS in booking and amendment requests</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-29615</td>
+  </tr>
+  <tr>
+    <td>DTTP25-31684 – MuleSoft Tech Story</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-31684</td>
+  </tr>
+  <tr>
+    <td>DTTP25-37438 – MuleSoft Tech Story</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-37438</td>
+  </tr>
+  <tr>
+    <td>DTTP25-37439 – MuleSoft Tech Story</td>
+    <td>https://smartship.atlassian.net/browse/DTTP25-37439</td>
+  </tr>
+  <tr>
+    <td>IA INT002.1 – Get Price Lists</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4248076289/IA+INT002.1v1.1+-+Get+price+lists</td>
+  </tr>
+  <tr>
+    <td>IA INT002.2 – Get Cabin Types</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4249387009/IA+INT002.2v1.1+-+Get+cabin+types</td>
+  </tr>
+  <tr>
+    <td>IA INT002.3 – Get Cabin Preferences</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4249419777</td>
+  </tr>
+  <tr>
+    <td>IA INT002.4 – Get Categories</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4249387137</td>
+  </tr>
+  <tr>
+    <td>IA INT005.2 – Get Flights</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/3463905380</td>
+  </tr>
+  <tr>
+    <td>IA INT004.3 – Insurance</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4452319314</td>
+  </tr>
+  <tr>
+    <td>IA INT004.4 – Price to Book</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4537876824</td>
+  </tr>
+  <tr>
+    <td>IA INT006 – Hold Option</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4800413697</td>
+  </tr>
+  <tr>
+    <td>IA INT007 – Booking Request</td>
+    <td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/4537876481</td>
+  </tr>
+</table>
+
+<h2>Feature Summary</h2>
+
+<p><strong>Business Context</strong></p>
+<p>
+  MSC Cruises offers repositioning voyages — cruises where the ship departs from one port and arrives at
+  a completely different destination, without returning to where it started. Because customers on these
+  itineraries only need to travel in one direction, the cruise package may include either an outbound
+  flight to the embarkation port, a return flight home from the disembarkation port, or both legs for
+  guests travelling to and from the same city.
+</p>
+<p>
+  Today, the MSC website cannot display or sell these one-way packaged flight options. When a customer
+  browses a repositioning cruise that includes a one-way flight, the booking platform fails to return
+  flight availability results, meaning the guest either sees no options or hits a dead end before they
+  can complete their booking. This results in lost sales and a poor guest experience for an important
+  part of the MSC cruise portfolio.
+</p>
+
+<p><strong>What this feature delivers</strong></p>
+<p>
+  This feature unlocks the ability for customers to search, select, and book repositioning cruises with
+  one-way packaged flights — outbound only, return only, or both legs — end-to-end through the MSC
+  booking website. Key improvements include:
+</p>
+<ul>
+  <li>
+    <strong>Flight availability is no longer blocked</strong> for categories that include a single
+    flight leg. Customers can view and select the available flight without encountering missing data
+    or errors.
+  </li>
+  <li>
+    <strong>The booking website adapts its display</strong> based on the flight type available —
+    showing clear one-way banners, direction-specific labels ("Outbound Only" / "Return Only"), and
+    relevant flight cards. Unavailable legs are hidden throughout the booking journey.
+  </li>
+  <li>
+    <strong>Pricing, insurance, and booking confirmations</strong> correctly reflect the one-way
+    nature of the flight package, ensuring DTS applies the right pricing logic and that all
+    downstream systems are aligned.
+  </li>
+  <li>
+    <strong>A consistent flight type indicator</strong> is carried through every step of the booking
+    funnel — from category search through to booking confirmation — replacing fragmented or hardcoded
+    values that previously caused failures.
+  </li>
+</ul>
+
+
+<h2>Business Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>ID</th><th>Requirements</th></tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a B2CW website user, I want the category search results to indicate whether an air package includes a round trip, outbound-only, or return-only flight so that the correct one-way UI (banner and single-leg flight selection) is displayed on the website.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a B2CW website user, I want flight availability results to correctly reflect one-way packages so that I can select the available flight leg without encountering missing data errors.</td>
+  </tr>
+  <tr>
+    <td>BR-003</td>
+    <td>As the DTS system, I want the insurance, price, booking, and amendment interfaces to pass the correct one-way indicator so that DTS can apply the appropriate pricing and processing logic for the selected air type.</td>
+  </tr>
+</table>
+
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>UC#</th><th>PreCondition</th><th>Actor/s</th><th>Use Case</th><th>Functionality Expected</th><th>Open Questions</th></tr>
+
+  <tr>
+    <td>UC-001</td>
+    <td>
+      <ul>
+        <li>Customer is searching for a cruise package on B2CW.</li>
+        <li>The selected cruise is a repositioning cruise with a packaged air item that is outbound-only, return-only, or round-trip.</li>
+      </ul>
+    </td>
+    <td>Customer on B2C Website, MuleSoft INT002.1, INT002.2, INT002.3, INT002.4, DTS</td>
+    <td>Category search results indicate the air trip type for each packaged air item (BR-001)</td>
+    <td>
+      <ol>
+        <li>B2CW calls the relevant INT002.x variant with a category search request.</li>
+        <li>MuleSoft INT002.x calls DTS and receives category data containing AIR packaged items, each with an <code>&lt;Occurrence&gt;</code> tag (<code>*</code>, <code>O</code>, or <code>R</code>).</li>
+        <li>MuleSoft derives <code>airType</code> for each AIR packaged item — <code>ROUND_TRIP</code>, <code>OUTBOUND_ONLY</code>, or <code>RETURN_ONLY</code> — and includes it in the category search response to B2CW.</li>
+        <li>B2CW reads <code>airType</code> and adapts the UI accordingly: displaying a one-way banner and single-leg flight selection for one-way packages, or standard UI for round-trip.</li>
+        <li>B2CW carries the <code>airType</code> value forward into all subsequent booking funnel calls.</li>
+      </ol>
+    </td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>UC-002</td>
+    <td>
+      <ul>
+        <li>Customer has selected a repositioning cruise with a one-way packaged air item.</li>
+        <li>B2CW holds <code>airType</code> (OUTBOUND_ONLY or RETURN_ONLY) from the INT002.x response.</li>
+      </ul>
+    </td>
+    <td>Customer on B2C Website, MuleSoft INT005.2, DTS</td>
+    <td>Flight availability returns only the relevant flight collection for one-way packages (BR-002)</td>
+    <td>
+      <ol>
+        <li>B2CW calls INT005.2 with a flight availability request including the <code>airType</code> value from the category search response.</li>
+        <li>INT005.2 calls DTS and receives a <code>DtsAirWrapResponse</code> containing only the flight collection(s) applicable to the declared air type:
+          <ul>
+            <li><code>OUTBOUND_ONLY</code>: only <code>OutboundFlightChoices</code> and one <code>&lt;Selector&gt;</code> are returned.</li>
+            <li><code>RETURN_ONLY</code>: only <code>ReturnFlightChoices</code> and one <code>&lt;Selector&gt;</code> are returned.</li>
+          </ul>
+        </li>
+        <li>MuleSoft maps the response based on <code>airType</code>, returning only the relevant flight collection to B2CW; the other collection is absent.</li>
+        <li>B2CW displays only the available flight direction to the customer; the unavailable leg is suppressed throughout the booking funnel.</li>
+      </ol>
+    </td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>UC-003</td>
+    <td>
+      <ul>
+        <li>Customer has selected a flight and is proceeding through insurance, pricing, booking, or amendment for a repositioning cruise with a one-way packaged air item.</li>
+        <li>B2CW holds <code>airType</code> from INT002.x and the applicable flight selection(s) from INT005.2.</li>
+      </ul>
+    </td>
+    <td>Customer on B2C Website, MuleSoft INT004.3, INT004.4, INT006, INT007, DTS</td>
+    <td>Insurance, price, booking, and amendment interfaces validate and forward airType to DTS (BR-003)</td>
+    <td>
+      <ol>
+        <li>B2CW calls INT004.3 (insurance), INT004.4 (price), INT006 (hold option), or INT007 (booking) with <code>airType</code> and the appropriate flight collection(s) for the declared air type.</li>
+        <li>MuleSoft validates consistency between <code>airType</code> and the supplied flight collections before making any DTS call:
+          <ul>
+            <li><code>ROUND_TRIP</code>: both outbound and return collections must be present.</li>
+            <li><code>OUTBOUND_ONLY</code>: outbound collection required; return must be absent.</li>
+            <li><code>RETURN_ONLY</code>: return collection required; outbound must be absent.</li>
+          </ul>
+        </li>
+        <li>If validation passes, MuleSoft forwards the request to DTS with <code>&lt;OneWay&gt;</code> set to <code>yes</code> (one-way) or <code>no</code> (round-trip), and both <code>&lt;OutboundDepartureDate&gt;</code> and <code>&lt;ReturnDepartureDate&gt;</code> populated.</li>
+        <li>DTS returns the insurance, price, hold option, or booking response. MuleSoft returns it to B2CW.</li>
+      </ol>
+    </td>
+    <td></td>
+  </tr>
+
+  <tr>
+    <td>UC-004</td>
+    <td>
+      <ul>
+        <li>Customer is browsing a standard cruise with a round-trip packaged air item.</li>
+      </ul>
+    </td>
+    <td>Customer on B2C Website, MuleSoft (all affected interfaces), DTS</td>
+    <td>Existing round-trip air packages continue to work unchanged after the airType change</td>
+    <td>
+      <ol>
+        <li>INT002.x derives <code>airType</code> = <code>ROUND_TRIP</code> from DTS <code>&lt;Occurrence&gt;</code> = <code>*</code> and returns it to B2CW.</li>
+        <li>INT005.2 receives <code>airType</code> = <code>ROUND_TRIP</code> and returns both <code>OutboundFlightChoices</code> and <code>ReturnFlightChoices</code> as before.</li>
+        <li>INT004.3, INT004.4, INT006, and INT007 receive <code>airType</code> = <code>ROUND_TRIP</code> with both collections present, pass validation, and forward <code>&lt;OneWay&gt;</code> = <code>no</code> to DTS.</li>
+        <li>B2CW displays the standard round-trip flight selection UI; no one-way banners or labels are shown.</li>
+      </ol>
+    </td>
+    <td></td>
+  </tr>
+
+</table>
+
+
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Requirement ID</th><th>Interface</th><th>Requirement Description</th><th>Category</th><th>Priority</th></tr>
+
+  <tr>
+    <td>NFR-001</td>
+    <td>INT005.2</td>
+    <td>
+      The outbound and return flight collections in the INT005.2 response are optional. Consumers
+      that currently expect both collections to always be present must be assessed for backward
+      compatibility impact before deployment. The change must not cause existing round-trip consumers
+      to fail when both collections are present.
+    </td>
+    <td>Backward Compatibility</td>
+    <td>High</td>
+  </tr>
+
+  <tr>
+    <td>NFR-002</td>
+    <td>INT004.3, INT004.4, INT006, INT007</td>
+    <td>
+      When <code>airType</code> is present, it takes precedence over any legacy <code>isOneWay</code>
+      boolean field. When <code>airType</code> is absent, the integration must fall back to the legacy
+      field to maintain backward compatibility with existing callers that have not yet adopted
+      <code>airType</code>.
+    </td>
+    <td>Backward Compatibility</td>
+    <td>High</td>
+  </tr>
+
+</table>
+
+
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Use Case</th><th>Test Cases</th><th>Acceptance Criteria</th><th>Test Data</th></tr>
+
+  <!-- UC-001 — Category search exposes airType (INT002.1–4) -->
+  <tr>
+    <td>UC-001</td>
+    <td>TC-001: Happy Path – Category search correctly identifies an outbound-only flight package and returns the air type to the website</td>
+    <td>
+      <strong>Given</strong> a customer searches for a repositioning cruise that includes an outbound-only packaged flight<br/>
+      <strong>When</strong> the category search response is returned from DTS via INT002.x<br/>
+      <strong>Then</strong> the website receives <code>airType</code> = <code>OUTBOUND_ONLY</code> against the packaged air item, enabling the one-way outbound banner and single-leg flight selection to be displayed
+    </td>
+    <td>
+      Identify a repositioning cruise in DTS with an outbound-only packaged air category (DTS air occurrence = O).<br/>
+      Applicable to INT002.1, INT002.2, INT002.3, INT002.4 — test data required for each variant.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-001</td>
+    <td>TC-002: Happy Path – Category search correctly identifies a return-only flight package and returns the air type to the website</td>
+    <td>
+      <strong>Given</strong> a customer searches for a repositioning cruise that includes a return-only packaged flight<br/>
+      <strong>When</strong> the category search response is returned from DTS via INT002.x<br/>
+      <strong>Then</strong> the website receives <code>airType</code> = <code>RETURN_ONLY</code> against the packaged air item, enabling the one-way return banner and single-leg flight selection to be displayed
+    </td>
+    <td>
+      Cruise ID: OX20261031GOALRM — repositioning cruise with a return-only packaged air category (DTS air occurrence = R).<br/>
+      Applicable to INT002.1, INT002.2, INT002.3, INT002.4 — test data required for each variant.
+    </td>
+  </tr>
+
+  <!-- UC-002 — Flight availability for one-way packages (INT005.2) -->
+  <tr>
+    <td>UC-002</td>
+    <td>TC-003: Happy Path – Flight availability returns only outbound flight options when the package is outbound-only</td>
+    <td>
+      <strong>Given</strong> a customer has selected a repositioning cruise with an outbound-only packaged flight and the website requests flight availability with <code>airType</code> = <code>OUTBOUND_ONLY</code><br/>
+      <strong>When</strong> INT005.2 retrieves the available flights from DTS<br/>
+      <strong>Then</strong> only outbound flight options are returned to the website; no return flight options are included, and the customer can proceed to select their outbound flight
+    </td>
+    <td>
+      Identify a repositioning cruise with an outbound-only packaged flight where DTS returns flight availability for the outbound leg only.<br/>
+      Confirm the DTS response contains a single flight selector for the outbound direction.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-002</td>
+    <td>TC-004: Happy Path – Flight availability returns only return flight options when the package is return-only</td>
+    <td>
+      <strong>Given</strong> a customer has selected a repositioning cruise with a return-only packaged flight and the website requests flight availability with <code>airType</code> = <code>RETURN_ONLY</code><br/>
+      <strong>When</strong> INT005.2 retrieves the available flights from DTS<br/>
+      <strong>Then</strong> only return flight options are returned to the website; no outbound flight options are included, and the customer can proceed to select their return flight
+    </td>
+    <td>
+      Cruise ID: OX20261031GOALRM — repositioning cruise with a return-only packaged flight where DTS returns flight availability for the return leg only.<br/>
+      Confirm the DTS response contains a single flight selector for the return direction.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-002</td>
+    <td>TC-005: Error Scenario – Flight availability handles a DTS response that unexpectedly returns both legs for a one-way package</td>
+    <td>
+      <strong>Given</strong> a customer has selected an outbound-only packaged flight and flight availability is requested with <code>airType</code> = <code>OUTBOUND_ONLY</code><br/>
+      <strong>When</strong> DTS unexpectedly returns both outbound and return flight collections in the response<br/>
+      <strong>Then</strong> INT005.2 returns only the outbound flight collection to the website without an unhandled error, and the return collection is discarded
+    </td>
+    <td>
+      Simulate a DTS flight availability response for an outbound-only request that incorrectly includes both outbound and return flight collections.<br/>
+      Use a stubbed or mocked DTS response to create this defensive scenario.
+    </td>
+  </tr>
+
+  <!-- UC-003 — Insurance, price, hold option, booking forward airType (INT004.3, INT004.4, INT006, INT007) -->
+  <tr>
+    <td>UC-003</td>
+    <td>TC-006: Happy Path – Insurance and price calculations correctly reflect an outbound-only package when passed to DTS</td>
+    <td>
+      <strong>Given</strong> a customer has selected an outbound-only flight for a repositioning cruise and proceeds to the insurance and pricing step<br/>
+      <strong>When</strong> INT004.3 (insurance) and INT004.4 (price) send the request to DTS<br/>
+      <strong>Then</strong> DTS receives the correct one-way indicator alongside the outbound flight details only, and returns insurance and price results that reflect the one-way package
+    </td>
+    <td>
+      Identify a repositioning cruise with an outbound-only packaged flight that is available for insurance and price calculation in DTS.<br/>
+      Request should include only the outbound flight collection.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-003</td>
+    <td>TC-007: Happy Path – Hold option correctly reflects a return-only package when passed to DTS</td>
+    <td>
+      <strong>Given</strong> a customer has selected a return-only flight for a repositioning cruise and proceeds to hold the option<br/>
+      <strong>When</strong> INT006 (hold option) sends the request to DTS<br/>
+      <strong>Then</strong> DTS receives the correct one-way indicator alongside the return flight details only, and the hold option is confirmed successfully
+    </td>
+    <td>
+      Cruise ID: OX20261031GOALRM — repositioning cruise with a return-only packaged flight that is available for hold option in DTS.<br/>
+      Request should include only the return flight collection.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-003</td>
+    <td>TC-008: Happy Path – Booking correctly reflects an outbound-only package when passed to DTS</td>
+    <td>
+      <strong>Given</strong> a customer has selected an outbound-only flight for a repositioning cruise and proceeds to confirm the booking<br/>
+      <strong>When</strong> INT007 (booking) sends the request to DTS<br/>
+      <strong>Then</strong> DTS receives the correct one-way indicator alongside the outbound flight details only, and the booking is confirmed successfully
+    </td>
+    <td>
+      Identify a repositioning cruise with an outbound-only packaged flight that is bookable in DTS.<br/>
+      Request should include only the outbound flight collection.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-003</td>
+    <td>TC-009: Error Scenario – Request is rejected when the flight collections supplied do not match the declared air type</td>
+    <td>
+      <strong>Given</strong> a request is sent to INT004.3, INT004.4, INT006, or INT007 declaring <code>airType</code> = <code>OUTBOUND_ONLY</code> but includes a return flight collection<br/>
+      <strong>When</strong> MuleSoft validates the request<br/>
+      <strong>Then</strong> the request is rejected before reaching DTS and an error response is returned to the website indicating the inconsistency
+    </td>
+    <td>
+      Construct a request for a repositioning cruise with <code>airType</code> = <code>OUTBOUND_ONLY</code> that incorrectly includes a return flight collection.<br/>
+      Test against INT004.3, INT004.4, INT006, and INT007 separately.
+    </td>
+  </tr>
+
+  <!-- UC-004 — Round-trip backward compatibility -->
+  <tr>
+    <td>UC-004</td>
+    <td>TC-010: Happy Path – A standard round-trip cruise package continues to search, price, and book without any change in behaviour</td>
+    <td>
+      <strong>Given</strong> a customer searches for and books a standard cruise with a round-trip packaged flight<br/>
+      <strong>When</strong> the request flows through INT002.x, INT005.2, INT004.3, INT004.4, INT006, and INT007<br/>
+      <strong>Then</strong> all interfaces behave exactly as before — both outbound and return flight collections are present throughout, DTS receives the round-trip indicator, and the booking completes successfully with no one-way banners displayed
+    </td>
+    <td>
+      Identify a standard (non-repositioning) cruise with a round-trip packaged air category.<br/>
+      Use an existing test booking that covers the full funnel end-to-end to confirm no regression.
+    </td>
+  </tr>
+
+  <tr>
+    <td>UC-004</td>
+    <td>TC-011: Alternative Path – Existing callers that send the legacy one-way flag instead of airType continue to be handled correctly</td>
+    <td>
+      <strong>Given</strong> a request is sent to INT004.3, INT004.4, INT006, or INT007 without the new <code>airType</code> field but with the legacy one-way indicator populated<br/>
+      <strong>When</strong> MuleSoft processes the request<br/>
+      <strong>Then</strong> the legacy field is used to determine the one-way indicator sent to DTS, and the request is processed successfully without error — existing integrations that have not yet adopted <code>airType</code> are unaffected
+    </td>
+    <td>
+      Construct a request for a round-trip cruise that omits <code>airType</code> and includes only the legacy one-way field set to false.<br/>
+      Test against INT004.3, INT004.4, INT006, and INT007 — confirm the legacy field exists on each interface before running this scenario.
+    </td>
+  </tr>
+
+</table>
+
+</body>
+</html>

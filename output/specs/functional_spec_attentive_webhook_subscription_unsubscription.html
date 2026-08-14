@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – Attentive Webhook Subscription and Unsubscription</title>
+</head>
+<body>
+
+<h1>Functional Specification – Attentive Webhook Subscription and Unsubscription</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>[TO BE CONFIRMED]</td>
+    <td>02/Jun/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td>INT172: [TO BE CONFIRMED] | INT174: [TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>MS Arch: Attentive | Webhook security measures</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>API Connections – Attentive webhook app overview per environment</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Attentive IP whitelisting for webhooks</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>Webhook Authentication documentation</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>IA INT172 – Attentive Webhook Subscription</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+  <tr>
+    <td>IA INT174 – Attentive Webhook Unsubscription</td>
+    <td>[TO BE CONFIRMED]</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+  MSC Cruises uses Attentive as its marketing communications platform for email and SMS channels. Customer opt-in and opt-out preferences are captured in Attentive in real time when customers subscribe or unsubscribe from marketing communications. This feature delivers two new MuleSoft webhook integrations — INT172 (Attentive Webhook Subscription) and INT174 (Attentive Webhook Unsubscription) — to ensure that these consent preference changes are propagated in real time to the MSC Customer Hub (CHUB) and the Customer Data Platform (CDP), so that customer preferences are consistent across all MSC systems without delay.
+</p>
+<p>
+  INT172 handles subscription events (event types: email.subscribed, sms.subscribed) and INT174 handles unsubscription events (event types: email.unsubscribed, sms.unsubscribed). Both integrations follow the same orchestration pattern: validate the HMAC-SHA256 signature on the inbound Attentive request, upsert the customer in CHUB via CH042 using the email address as the key identifier, import the updated profile to CDP via A092, and send tracking history for the event to CDP via A094. MuleSoft returns 200 OK to Attentive only after all downstream calls complete successfully. Any downstream failure causes an error response to be returned to Attentive, which applies an exponential backoff retry strategy for up to three days.
+</p>
+<p>
+  The Attentive webhook payload format is fixed and cannot be customised; requests must conform to the default Attentive subscription or unsubscription event schema. Each interface (INT172 and INT174) uses a separate, environment-specific HMAC-SHA256 signing key. Security is enforced at three layers: HMAC-SHA256 signature validation using the x-attentive-hmac-sha256 header, client credentials enforcement (static clientId and clientSecret passed as query parameters), and IP whitelisting of Attentive source addresses on Akamai under the verified-legacy category. All downstream integrations (CH042, A092, A094) must be idempotent to prevent duplicate records when Attentive retries events.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a marketing operations team, I want subscription events captured in Attentive to be recorded in CHUB and CDP in real time so that customer opt-in preferences are consistent across MSC systems.</td>
+    <td>INT172 receives email.subscribed and sms.subscribed webhook events from Attentive, validates the HMAC-SHA256 signature, and propagates the subscription status to CHUB via CH042 and to CDP via A092 and A094. The email address is the key customer identifier.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a marketing operations team, I want unsubscription events captured in Attentive to be recorded in CHUB and CDP in real time so that customer opt-out preferences are reflected across MSC systems without delay.</td>
+    <td>INT174 receives email.unsubscribed and sms.unsubscribed webhook events from Attentive, validates the HMAC-SHA256 signature, and propagates the opt-out status to CHUB via CH042 and to CDP via A092 and A094. The email address is the key customer identifier.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>A customer has subscribed to email or SMS marketing in Attentive. Attentive is configured to send subscription webhook events to the INT172 endpoint. The environment-specific HMAC-SHA256 signing key for INT172 is configured. Client credentials (clientId and clientSecret) for INT172 are provisioned. Attentive source IP addresses are whitelisted on Akamai under the verified-legacy category.</td>
+    <td>Attentive (external system); INT172 Attentive Webhook Subscription API (MuleSoft experience API); CH042 CHUB Unknown Customer Upsert; A092 CDP Import Profile; A094 CDP Send Tracking History</td>
+    <td>Record a subscription event (email.subscribed or sms.subscribed) in CHUB and CDP via INT172</td>
+    <td>
+      1. Attentive fires a subscription webhook (email.subscribed or sms.subscribed) to INT172, including the x-attentive-hmac-sha256 signature header and clientId/clientSecret query parameters.<br/>
+      2. Akamai enforces IP whitelisting of Attentive source addresses before the request reaches INT172.<br/>
+      3. INT172 (Attentive Webhook Subscription API) validates the HMAC-SHA256 signature by computing the digest from the raw request body and comparing it against the x-attentive-hmac-sha256 header value using the INT172 environment-specific signing key. Requests with an invalid or missing signature are rejected immediately; no downstream calls are made.<br/>
+      4. INT172 validates the client credentials via the client enforcement policy on the endpoint.<br/>
+      5. INT172 calls CH042 (CHUB Unknown Customer Upsert) using the email address as the customer identifier. The email address is always present; for email.subscribed events the phone number is not present in the payload.<br/>
+      6. On a successful CH042 response, INT172 calls A092 (CDP Import Profile) using the subscription status returned by CHUB.<br/>
+      7. On a successful A092 response, INT172 calls A094 (CDP Send Tracking History for signup) using the subscription status returned by CHUB.<br/>
+      8. On successful completion of all downstream calls, INT172 returns 200 OK to Attentive.<br/>
+      9. If any downstream call fails (CH042, A092, or A094), INT172 returns a non-2xx error response to Attentive; no further downstream calls are made beyond the point of failure.<br/>
+      10. Attentive applies an exponential backoff retry strategy for non-2xx responses for up to 3 days. On retry, INT172 reprocesses the event through the full chain; downstream systems (CH042, A092, A094) must handle duplicate events idempotently so no duplicate records are created in CHUB or CDP.
+    </td>
+    <td>What HTTP error status code should INT172 return to Attentive on signature validation failure (e.g. 401 or 403)? What HTTP error status code is returned to Attentive when a downstream call fails (e.g. 500 or 502)? What is the idempotency mechanism in CH042, A092, and A094 (e.g. upsert logic, deduplication key)?</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>A customer has unsubscribed from email or SMS marketing in Attentive. Attentive is configured to send unsubscription webhook events to the INT174 endpoint. The environment-specific HMAC-SHA256 signing key for INT174 is configured (separate from INT172). Client credentials (clientId and clientSecret) for INT174 are provisioned. Attentive source IP addresses are whitelisted on Akamai under the verified-legacy category.</td>
+    <td>Attentive (external system); INT174 Attentive Webhook Unsubscription API (MuleSoft experience API); CH042 CHUB Unknown Customer Upsert; A092 CDP Import Profile; A094 CDP Send Tracking History</td>
+    <td>Record an unsubscription event (email.unsubscribed or sms.unsubscribed) in CHUB and CDP via INT174</td>
+    <td>
+      1. Attentive fires an unsubscription webhook (email.unsubscribed or sms.unsubscribed) to INT174, including the x-attentive-hmac-sha256 signature header and clientId/clientSecret query parameters.<br/>
+      2. Akamai enforces IP whitelisting of Attentive source addresses before the request reaches INT174.<br/>
+      3. INT174 (Attentive Webhook Unsubscription API) validates the HMAC-SHA256 signature by computing the digest from the raw request body and comparing it against the x-attentive-hmac-sha256 header value using the INT174 environment-specific signing key (different from INT172 — separate webhook application per environment). Requests with an invalid or missing signature are rejected immediately; no downstream calls are made.<br/>
+      4. INT174 validates the client credentials via the client enforcement policy on the endpoint.<br/>
+      5. INT174 calls CH042 (CHUB Unknown Customer Upsert) using the email address as the customer identifier. The email address is always present in the payload.<br/>
+      6. On a successful CH042 response, INT174 calls A092 (CDP Import Profile) using the subscription status returned by CHUB.<br/>
+      7. On a successful A092 response, INT174 calls A094 (CDP Send Tracking History for unsubscription) using the subscription status returned by CHUB.<br/>
+      8. On successful completion of all downstream calls, INT174 returns 200 OK to Attentive.<br/>
+      9. If any downstream call fails (CH042, A092, or A094), INT174 returns a non-2xx error response to Attentive; no further downstream calls are made beyond the point of failure.<br/>
+      10. Attentive applies an exponential backoff retry strategy for non-2xx responses for up to 3 days. On retry, INT174 reprocesses the event through the full chain; downstream systems (CH042, A092, A094) must handle duplicate events idempotently so no duplicate records are created in CHUB or CDP.
+    </td>
+    <td>What HTTP error status code should INT174 return to Attentive on signature validation failure (e.g. 401 or 403)? What HTTP error status code is returned for downstream failures? Does the A094 tracking event type differ between subscription (signup) and unsubscription? Confirm the correct A094 event type label for unsubscription events. What is the idempotency mechanism in CH042, A092, and A094 (e.g. upsert logic, deduplication key)?</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — SLA, security, throughput,
+            error handling, retry policy, availability.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>INT172, INT174</td>
+    <td>Both INT172 and INT174 must validate the HMAC-SHA256 signature on every inbound request before executing any downstream call. The digest is computed from the raw request body and compared against the x-attentive-hmac-sha256 header value using the environment- and application-specific signing key. Requests with an invalid or missing signature must be rejected immediately with an error response. No downstream calls may be made for requests that fail signature validation.</td>
+    <td>Security</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-002</td>
+    <td>INT172, INT174</td>
+    <td>INT172 and INT174 must each use a separate, environment-specific HMAC-SHA256 signing key. INT172 uses a different signing key from INT174, reflecting that they are separate Attentive webhook applications per environment.</td>
+    <td>Security</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-003</td>
+    <td>INT172, INT174</td>
+    <td>Client credentials (static clientId and clientSecret) passed by Attentive as query parameters must be validated via the client enforcement policy on INT172 and INT174 respectively. Each interface has its own set of client credentials.</td>
+    <td>Security</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-004</td>
+    <td>INT172, INT174</td>
+    <td>Attentive source IP addresses must be whitelisted on Akamai under the verified-legacy category. Requests originating from non-whitelisted IPs must be blocked at the Akamai layer before reaching the MuleSoft endpoints.</td>
+    <td>Security</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-005</td>
+    <td>INT172, INT174</td>
+    <td>INT172 and INT174 must return 200 OK to Attentive only after all downstream calls (CH042, A092, A094) have completed successfully. Any downstream failure must result in a non-2xx error response to Attentive, enabling Attentive's exponential backoff retry strategy to activate.</td>
+    <td>Availability</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-006</td>
+    <td>CH042, A092, A094</td>
+    <td>All downstream integrations invoked by INT172 and INT174 (CH042, A092, A094) must support idempotent processing. Attentive may retry a webhook event for up to 3 days using an exponential backoff strategy. Repeated processing of the same event must not result in duplicate customer records in CHUB or CDP.</td>
+    <td>Availability</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-007</td>
+    <td>INT172, INT174</td>
+    <td>INT172 and INT174 must accept and process webhook payloads in the default Attentive subscription and unsubscription event schemas respectively. The Attentive payload format is fixed and cannot be customised. The email address is always present; the phone number may be absent for email event types.</td>
+    <td>Compliance</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-008</td>
+    <td>INT172, INT174</td>
+    <td>Response time SLA for INT172 and INT174 is [TO BE CONFIRMED]. Both APIs orchestrate three sequential downstream calls; the total processing time per event must remain within Attentive's webhook timeout window.</td>
+    <td>Performance</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-009</td>
+    <td>INT172, INT174</td>
+    <td>Expected peak throughput (events per second or per minute) for INT172 and INT174 is [TO BE CONFIRMED]. Both APIs must be capable of handling concurrent webhook events from Attentive without message loss or queuing failures.</td>
+    <td>Performance</td>
+    <td>Medium</td>
+  </tr>
+  <tr>
+    <td>NFR-010</td>
+    <td>INT172, INT174</td>
+    <td>All events processed by INT172 and INT174 must be logged with sufficient detail to support audit and troubleshooting. Log entries must include at minimum: event type, customer identifier (email address, masked or hashed as required by data protection policy), downstream call outcomes, and final HTTP response status returned to Attentive.</td>
+    <td>Auditability</td>
+    <td>Medium</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — HTTP method, endpoint, payload,
+            expected status code, response body.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+
+  <!-- UC-001: INT172 Subscription -->
+  <tr>
+    <td>UC-001</td>
+    <td>HAPPY PATH – Valid email.subscribed event processed end-to-end via INT172<br/><br/>
+      Given Attentive sends a valid email.subscribed webhook to INT172 with a correct HMAC-SHA256 signature, a valid email address, no phone number in the payload, and valid clientId/clientSecret query parameters<br/>
+      When INT172 processes the event<br/>
+      Then INT172 validates the signature, calls CH042 with the email address as identifier, calls A092 with the subscription status from CHUB, calls A094 with the subscription status from CHUB, and returns 200 OK to Attentive
+    </td>
+    <td>HTTP 200 OK returned to Attentive. All three downstream calls (CH042, A092, A094) are invoked in the correct sequence. No error response is raised.</td>
+    <td>Valid email.subscribed webhook payload in the default Attentive schema (no phone number field present), correctly signed with the INT172 environment-specific HMAC-SHA256 key, with valid clientId and clientSecret for INT172.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>HAPPY PATH – Valid sms.subscribed event processed end-to-end via INT172<br/><br/>
+      Given Attentive sends a valid sms.subscribed webhook to INT172 with a correct HMAC-SHA256 signature and a valid email address<br/>
+      When INT172 processes the event<br/>
+      Then INT172 validates the signature, calls CH042 with the email address as identifier, calls A092 with the subscription status from CHUB, calls A094 with the subscription status from CHUB, and returns 200 OK to Attentive
+    </td>
+    <td>HTTP 200 OK returned to Attentive. All three downstream calls (CH042, A092, A094) are invoked in the correct sequence. No error response is raised.</td>
+    <td>Valid sms.subscribed webhook payload in the default Attentive schema (email address present), correctly signed with the INT172 environment-specific HMAC-SHA256 key, with valid clientId and clientSecret for INT172.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ERROR – Invalid HMAC-SHA256 signature rejected by INT172<br/><br/>
+      Given Attentive sends a subscription webhook to INT172 with an invalid HMAC-SHA256 signature in the x-attentive-hmac-sha256 header<br/>
+      When INT172 validates the signature<br/>
+      Then INT172 rejects the request and returns an error response to Attentive without calling CH042, A092, or A094
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive (expected status code: [TO BE CONFIRMED] — 401 or 403). No downstream calls to CH042, A092, or A094 are made.</td>
+    <td>Subscription webhook payload with an incorrectly computed HMAC-SHA256 signature (e.g. computed with a wrong key or against a tampered request body).</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ERROR – Missing HMAC-SHA256 signature header rejected by INT172<br/><br/>
+      Given Attentive sends a subscription webhook to INT172 with the x-attentive-hmac-sha256 header absent from the request<br/>
+      When INT172 validates the signature<br/>
+      Then INT172 rejects the request and returns an error response without calling any downstream system
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive. No downstream calls to CH042, A092, or A094 are made.</td>
+    <td>Subscription webhook payload submitted to INT172 with no x-attentive-hmac-sha256 header present.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ERROR – CH042 failure stops the INT172 processing chain<br/><br/>
+      Given Attentive sends a valid subscription webhook to INT172 with a correct signature, and CH042 returns an error response<br/>
+      When INT172 calls CH042<br/>
+      Then INT172 returns an error response to Attentive; no calls to A092 or A094 are made
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive. A092 and A094 are not called.</td>
+    <td>Valid subscription webhook with correct signature for INT172; CH042 stub or environment configured to return an error response for the test email address.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ERROR – A092 failure stops the INT172 processing chain<br/><br/>
+      Given Attentive sends a valid subscription webhook to INT172 with a correct signature, CH042 completes successfully, and A092 returns an error response<br/>
+      When INT172 calls A092<br/>
+      Then INT172 returns an error response to Attentive; no call to A094 is made
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive. A094 is not called.</td>
+    <td>Valid subscription webhook with correct signature; CH042 stub configured to return success; A092 stub or environment configured to return an error response.</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ERROR – A094 failure returns error to Attentive from INT172<br/><br/>
+      Given Attentive sends a valid subscription webhook to INT172 with a correct signature, CH042 and A092 complete successfully, and A094 returns an error response<br/>
+      When INT172 calls A094<br/>
+      Then INT172 returns an error response to Attentive
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive.</td>
+    <td>Valid subscription webhook with correct signature; CH042 and A092 stubs configured to return success; A094 stub or environment configured to return an error response.</td>
+  </tr>
+
+  <!-- UC-002: INT174 Unsubscription -->
+  <tr>
+    <td>UC-002</td>
+    <td>HAPPY PATH – Valid email.unsubscribed event processed end-to-end via INT174<br/><br/>
+      Given Attentive sends a valid email.unsubscribed webhook to INT174 with a correct HMAC-SHA256 signature and a valid email address<br/>
+      When INT174 processes the event<br/>
+      Then INT174 validates the signature, calls CH042 with the email address as identifier, calls A092 with the subscription status from CHUB, calls A094 with the unsubscription tracking event, and returns 200 OK to Attentive
+    </td>
+    <td>HTTP 200 OK returned to Attentive. All three downstream calls (CH042, A092, A094) are invoked in the correct sequence. No error response is raised.</td>
+    <td>Valid email.unsubscribed webhook payload in the default Attentive schema (email address present), correctly signed with the INT174 environment-specific HMAC-SHA256 key (note: different key from INT172), with valid clientId and clientSecret for INT174.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>HAPPY PATH – Valid sms.unsubscribed event processed end-to-end via INT174<br/><br/>
+      Given Attentive sends a valid sms.unsubscribed webhook to INT174 with a correct HMAC-SHA256 signature and a valid email address<br/>
+      When INT174 processes the event<br/>
+      Then INT174 validates the signature, calls CH042 with the email address as identifier, calls A092 with the subscription status from CHUB, calls A094 with the unsubscription tracking event, and returns 200 OK to Attentive
+    </td>
+    <td>HTTP 200 OK returned to Attentive. All three downstream calls (CH042, A092, A094) are invoked in the correct sequence. No error response is raised.</td>
+    <td>Valid sms.unsubscribed webhook payload in the default Attentive schema (email address present), correctly signed with the INT174 environment-specific HMAC-SHA256 key, with valid clientId and clientSecret for INT174.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>ALT PATH – INT174 rejects a request signed with INT172's key (signing key isolation)<br/><br/>
+      Given a request arrives at INT174 that has been signed using the INT172 signing key rather than the INT174 signing key<br/>
+      When INT174 validates the signature<br/>
+      Then INT174 rejects the request because the digest does not match the INT174 signing key; no downstream calls are made
+    </td>
+    <td>Non-2xx HTTP error response returned. No downstream calls to CH042, A092, or A094 are made. Confirms that INT174's signing key is correctly isolated from INT172's key.</td>
+    <td>Unsubscription webhook payload correctly signed using the INT172 environment signing key (incorrect for INT174), submitted to the INT174 endpoint.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>ERROR – Invalid HMAC-SHA256 signature rejected by INT174<br/><br/>
+      Given Attentive sends an unsubscription webhook to INT174 with an invalid HMAC-SHA256 signature<br/>
+      When INT174 validates the signature<br/>
+      Then INT174 rejects the request and returns an error response to Attentive without calling any downstream system
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive (expected status code: [TO BE CONFIRMED] — 401 or 403). No downstream calls made.</td>
+    <td>Unsubscription webhook payload with an incorrectly computed HMAC-SHA256 signature submitted to INT174.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>ERROR – CH042 failure stops the INT174 processing chain<br/><br/>
+      Given Attentive sends a valid unsubscription webhook to INT174 with a correct signature, and CH042 returns an error response<br/>
+      When INT174 calls CH042<br/>
+      Then INT174 returns an error response to Attentive; no calls to A092 or A094 are made
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive. A092 and A094 are not called.</td>
+    <td>Valid unsubscription webhook with correct signature for INT174; CH042 stub or environment configured to return an error response for the test email address.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>ERROR – A092 failure stops the INT174 processing chain<br/><br/>
+      Given Attentive sends a valid unsubscription webhook to INT174 with a correct signature, CH042 completes successfully, and A092 returns an error response<br/>
+      When INT174 calls A092<br/>
+      Then INT174 returns an error response to Attentive; no call to A094 is made
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive. A094 is not called.</td>
+    <td>Valid unsubscription webhook with correct signature; CH042 stub configured to return success; A092 stub or environment configured to return an error response.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>ERROR – A094 failure returns error to Attentive from INT174<br/><br/>
+      Given Attentive sends a valid unsubscription webhook to INT174 with a correct signature, CH042 and A092 complete successfully, and A094 returns an error response<br/>
+      When INT174 calls A094<br/>
+      Then INT174 returns an error response to Attentive
+    </td>
+    <td>Non-2xx HTTP error response returned to Attentive.</td>
+    <td>Valid unsubscription webhook with correct signature; CH042 and A092 stubs configured to return success; A094 stub or environment configured to return an error response.</td>
+  </tr>
+
+  <tr>
+    <td>UC-001</td>
+    <td>HAPPY PATH – Attentive retry of a previously processed subscription event is handled idempotently by INT172<br/><br/>
+      Given Attentive retries a subscription webhook that INT172 has already processed successfully (same payload and same signature)<br/>
+      When INT172 processes the duplicate event<br/>
+      Then the downstream calls to CH042, A092, and A094 are handled idempotently; no duplicate records are created in CHUB or CDP; INT172 returns 200 OK to Attentive
+    </td>
+    <td>HTTP 200 OK returned to Attentive. No duplicate records created in CHUB or CDP. Downstream systems handle the duplicate event without error.</td>
+    <td>A subscription webhook event already successfully processed by INT172; same payload and signature retried to the INT172 endpoint.</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>HAPPY PATH – Attentive retry of a previously processed unsubscription event is handled idempotently by INT174<br/><br/>
+      Given Attentive retries an unsubscription webhook that INT174 has already processed successfully (same payload and same signature)<br/>
+      When INT174 processes the duplicate event<br/>
+      Then the downstream calls to CH042, A092, and A094 are handled idempotently; no duplicate records are created in CHUB or CDP; INT174 returns 200 OK to Attentive
+    </td>
+    <td>HTTP 200 OK returned to Attentive. No duplicate records created in CHUB or CDP. Downstream systems handle the duplicate event without error.</td>
+    <td>An unsubscription webhook event already successfully processed by INT174; same payload and signature retried to the INT174 endpoint.</td>
+  </tr>
+</table>
+
+</body>
+</html>

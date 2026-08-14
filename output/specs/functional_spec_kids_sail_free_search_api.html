@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – Kids Sail Free Search API</title>
+</head>
+<body>
+
+<h1>Functional Specification – Kids Sail Free Search API</h1>
+
+<!--
+  SECTION OWNERSHIP
+  ─────────────────────────────────────────────────────────────────
+  BA-owned (populated by Business Analyst):
+    - Document History
+    - Reference Documentation
+    - Feature Summary
+    - Business Requirements
+    - Use Cases
+    - Non-Functional Requirements
+    - Test Scenarios & Acceptance Criteria
+
+  SA-owned (populated by Solution Architect — DO NOT OVERWRITE):
+    - Solution Overview
+    - Involved Interfaces
+    - Sequence Diagrams
+    - Monitoring and Alerting Guidelines
+  ─────────────────────────────────────────────────────────────────
+-->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     DOCUMENT HISTORY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>VERSION</th>
+    <th>AUTHOR(S)</th>
+    <th>DATE</th>
+    <th>REMARKS</th>
+    <th>STATUS</th>
+    <th>TICKETS</th>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Sarah Suda</td>
+    <td>25/May/2026</td>
+    <td>Initial draft</td>
+    <td>Draft</td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     REFERENCE DOCUMENTATION  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Document</th>
+    <th>Link</th>
+  </tr>
+  <tr>
+    <td>Business Story – Kids Sail Free Promotion Visibility within the Package Step</td>
+    <td>https://smartship.atlassian.net/browse/MDTTPU-5834</td>
+  </tr>
+  <tr>
+    <td>Tech Story – Booking Funnel Search API Updates: Kids Sails Free</td>
+    <td>https://smartship.atlassian.net/browse/MDTTPU-7976</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURE SUMMARY  [BA-owned]
+════════════════════════════════════════════════════════ -->
+<h2>Feature Summary</h2>
+<p>
+The Kids Sail Free promotion allows minor guests to travel on a cruise at no cabin fare cost when certain qualifying conditions are met. At present, the booking funnel does not receive the Kids Sail Free availability flag from the reservation system, meaning the website cannot display the promotion during the package selection step or show an accurate fare breakdown for minor guests in the price details view.
+</p>
+<p>
+This feature adds the Kids Sail Free indicator to the responses returned by the booking funnel's search and pricing journey. Once exposed, the website will be able to display a dedicated promotional item on qualifying package cards, and to apply a labelled fare line for each minor guest in the price details breakdown when the promotion applies to the selected cabin.
+</p>
+<p>
+The change benefits B2C customers by making the promotion clearly visible during the booking journey, and supports the website frontend in applying consistent promotional display logic — including the correct priority ordering when multiple promotions are available simultaneously.
+</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BUSINESS REQUIREMENTS  [BA-owned]
+     Scope: solution-level user stories — not API-specific.
+════════════════════════════════════════════════════════ -->
+<h2>Business Requirements</h2>
+<p>Format: As a [actor] I want to [action] so that [benefit]</p>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>ID</th>
+    <th>Requirements</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As the booking funnel, I want to receive the Kids Sail Free availability indicator in the search and pricing responses so that the website can conditionally display the promotion to customers.</td>
+    <td>The Kids Sail Free indicator must be included in the price list, cabin type, and cabin preference responses. The value must be passed through as received from the reservation system with no modification. If absent in the reservation system response, the indicator must default to false.</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     USE CASES  [BA-owned]
+     Scope: functional solution flows.
+     Rule: name the MuleSoft API called in the
+           Functionality Expected column.
+════════════════════════════════════════════════════════ -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>A valid search or pricing request is made by the booking funnel at any step of the booking journey.</td>
+    <td>B2C Website (Booking Funnel), MuleSoft, DTS</td>
+    <td>Retrieve booking funnel search data including Kids Sail Free indicator</td>
+    <td>The website calls INT002.1 Get Price Lists, INT002.2 Get Cabin Types, or INT002.3 Get Cabin Preferences depending on the booking step. MuleSoft retrieves the data from DTS and maps the Kids Sail Free indicator onto the lowest priced category for each entry (price type, cabin type, or cabin preference). The value is passed through as-is from DTS. If absent in the DTS response, MuleSoft defaults the value to false and returns the response without error.</td>
+    <td>—</td>
+  </tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE SECTIONS BELOW UNTIL NEXT BA SECTION !!
+     The following three sections are owned by the Solution Architect.
+     The BA agent must preserve this content exactly as-is and must
+     never overwrite, replace, or modify it under any circumstances.
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- SA-OWNED: Solution Overview — BA AGENT DO NOT UPDATE -->
+<h2>Solution Overview</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- SA-OWNED: Involved Interfaces — BA AGENT DO NOT UPDATE -->
+<h2>Involved Interfaces</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Interface</th>
+    <th>High Level Impacts</th>
+    <th>Low Level Impacts</th>
+    <th>Integration High Level Architecture</th>
+  </tr>
+  <tr>
+    <td>[Populated by Solution Architect.]</td>
+    <td></td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+
+
+<!-- SA-OWNED: Sequence Diagrams — BA AGENT DO NOT UPDATE -->
+<h2>Sequence Diagrams</h2>
+<!-- BA AGENT: DO NOT MODIFY THIS SECTION. Owned by Solution Architect. -->
+<p>[Populated by Solution Architect.]</p>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     !! BA AGENT — DO NOT UPDATE ENDS HERE. Resume BA sections below !!
+═══════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NON-FUNCTIONAL REQUIREMENTS  [BA-owned]
+     Scope: API-specific — new requirements introduced by
+            this change only.
+════════════════════════════════════════════════════════ -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Requirement ID</th>
+    <th>Interface</th>
+    <th>Requirement Description</th>
+    <th>Category</th>
+    <th>Priority</th>
+  </tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>INT002.1, INT002.2, INT002.3</td>
+    <td>The Kids Sail Free indicator must be passed through from the DTS response without transformation or recalculation. No business logic may be applied to the value by MuleSoft.</td>
+    <td>Compliance</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-002</td>
+    <td>INT002.1, INT002.2, INT002.3</td>
+    <td>When the Kids Sail Free field is absent from the DTS response, all three interfaces must default the value to false. This default must be applied silently without error or warning to maintain backward compatibility with existing consumers.</td>
+    <td>Availability</td>
+    <td>High</td>
+  </tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MONITORING AND ALERTING GUIDELINES  [SA-owned — DO NOT EDIT]
+════════════════════════════════════════════════════════ -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[Populated by Solution Architect.]</p>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     TEST SCENARIOS & ACCEPTANCE CRITERIA  [BA-owned]
+     Scope: API-specific — MuleSoft interface behaviour.
+════════════════════════════════════════════════════════ -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+
+  <tr>
+    <td>UC-001</td>
+    <td>HAPPY PATH – DTS returns KSF indicator<br><br>Given a valid request is made to INT002.1, INT002.2, or INT002.3 and DTS returns the Kids Sail Free indicator<br>When MuleSoft processes the DTS response<br>Then the Kids Sail Free indicator is included in the response for each relevant entry with the value as received from DTS</td>
+    <td>MuleSoft includes the Kids Sail Free indicator in the lowest priced category for each entry, passing the value through as-is from DTS.</td>
+    <td>Search or pricing request for a cruise where DTS returns the Kids Sail Free indicator (both true and false scenarios).</td>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>ALT PATH – KSF field absent from DTS response<br><br>Given a valid request is made and DTS does not include the Kids Sail Free field<br>When MuleSoft processes the DTS response<br>Then the Kids Sail Free indicator is returned as false for all entries and no error is raised</td>
+    <td>MuleSoft defaults the Kids Sail Free indicator to false when the field is absent in the DTS response, without returning an error.</td>
+    <td>Search or pricing request where the DTS response does not contain the Kids Sail Free field.</td>
+  </tr>
+
+</table>
+
+</body>
+</html>

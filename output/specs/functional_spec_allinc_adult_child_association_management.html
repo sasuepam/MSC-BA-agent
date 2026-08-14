@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Functional Specification – ALLINC Adult–Child Association Management</title>
+</head>
+<body>
+
+<h1>Functional Specification – ALLINC Adult–Child Association Management</h1>
+
+<!-- Document History -->
+<h2>Document History</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>VERSION</th><th>AUTHOR(S)</th><th>DATE</th><th>REMARKS</th><th>STATUS</th><th>TICKETS</th></tr>
+  <tr><td>1</td><td>Sarah Suda</td><td>11/Aug/2026</td><td>Initial draft</td><td>Draft</td><td>[TO BE CONFIRMED]</td></tr>
+</table>
+
+<!-- Reference Documentation -->
+<h2>Reference Documentation</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>Document</th><th>Link</th></tr>
+  <tr><td>All inclusive Logic</td><td>https://msccruises.atlassian.net/wiki/spaces/DTP/pages/3898376402/Authorization+and+Logic+processes+for+B2C+API#DTS-ALL-INCLUSIVE-RELATIONS-item-Authorization%3A</td></tr>
+</table>
+
+<!-- Feature Summary -->
+<h2>Feature Summary</h2>
+
+<h3>Background and Business Context</h3>
+<p>
+MSC Cruises offers All-Inclusive (ALLINC) onboard service packages that are sold in linked adult–minor pairs. Currently, the MuleSoft integration layer sources the relationships between adult and minor ALLINC items from the Content Management System (CMS). This dependency on CMS introduces a risk of data inconsistency.
+</p>
+<p>
+DTS will return a <code>linked-item-code</code> field on ALLINC items within the /obs/prices endpoint, providing a direct and authoritative source for adult–minor item relationships. The strategic decision has been made to migrate all adult–minor ALLINC association logic across the affected MuleSoft integrations from CMS to DTS-sourced data.
+</p>
+<p>
+Once deployed, all relationship validation will use DTS data exclusively. The CMS call within INT130 is retained solely for non-relationship content enrichment.
+</p>
+
+
+
+<!-- Business Requirements -->
+<h2>Business Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>ID</th><th>REQUIREMENT</th></tr>
+  <tr>
+    <td>BR-001</td>
+    <td>As a B2C consumer I want to retrieve a list of available onboard services where ALLINC adult and minor packages are explicitly linked to each other so that I can present correct paired package options to guests.</td>
+  </tr>
+  <tr>
+    <td>BR-002</td>
+    <td>As a B2C consumer I want the existing CMS-sourced ALLINC relationship fields to remain available alongside the new DTS-sourced fields at first deployment of the change so that I can migrate my implementation without a breaking change.</td>
+  </tr>
+  <tr>
+    <td>BR-003</td>
+    <td>As a B2C consumer I want the system to validate that any ALLINC minor item included in a price-to-book request is a permitted associate of the ALLINC adult item in that request so that invalid package combinations are rejected before a booking is attempted.</td>
+  </tr>
+  <tr>
+    <td>BR-004</td>
+    <td>As a B2C consumer I want the system to validate that any ALLINC minor item included in a booking request is a permitted associate of the ALLINC adult item in that request so that only valid package combinations can be booked.</td>
+  </tr>
+  <tr>
+    <td>BR-005</td>
+    <td>As a B2C consumer I want the system to validate that any ALLINC minor item included in a refund request is linked to an ALLINC adult item present in the same refund request so that partial or orphaned refund requests for linked packages are rejected.</td>
+  </tr>
+  <tr>
+    <td>BR-006</td>
+    <td>As a B2C consumer I want the system to verify that all passengers holding an ALLINC minor item are included in the refund request so that partial refunds for all-inclusive minor packages are not permitted.</td>
+  </tr>
+  <tr>
+    <td>BR-007</td>
+    <td>As a B2C consumer I want to retrieve booking details that include adult–minor ALLINC relationship data for purchased items so that I can display the correct linked package information to guests post-booking.</td>
+  </tr>
+</table>
+
+<!-- Use Cases -->
+<h2>Use Cases</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>UC#</th>
+    <th>PreCondition</th>
+    <th>Actor/s</th>
+    <th>Use Case</th>
+    <th>Functionality Expected</th>
+    <th>Open Questions</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>Consumer has a valid session. DTS /obs/prices endpoint returns ALLINC items.</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>Retrieve available onboard services with DTS-sourced adult–minor ALLINC relationships (INT130)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT130 – Get Onboard Services (Available Items).</li>
+        <li>INT130 determines which ALLINC items have an adult–minor relationship, based on DTS data. ALLINC items with no relationship are treated as standalone and apply to all applicable passengers without restriction.</li>
+        <li>Each adult ALLINC item that has a relationship is enriched with the list of its permitted related minor items.</li>
+        <li>Each minor ALLINC item that has a relationship is enriched with the list of adult items it is linked to, via reverse lookup across all adult items in the DTS response.</li>
+        <li>CMS is still called for non-relationship content enrichment data only.</li>
+        <li>The response returns both the new DTS-sourced relationship fields and the deprecated CMS-sourced relationship fields, to allow consumers to migrate without a breaking change.</li>
+      </ul>
+    </td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>Consumer has retrieved available items via INT130. Consumer submits a price-to-book request containing at least one ALLINC item.</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>Validate ALLINC adult–minor combination at price-to-book (INT139)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT139 – PriceToBook Items with ALLINC items in the request.</li>
+        <li>INT139 determines which ALLINC items in the request have an adult–minor relationship, based on DTS data.</li>
+        <li>For each adult ALLINC item in the request, INT139 derives the permitted related minor items.</li>
+        <li>INT139 verifies that the adult item is present for all applicable adult/senior passengers, and that the corresponding minor item is present for all applicable minor passengers — only where applicable minor passengers exist on the booking.</li>
+        <li>If DTS does not return a related minor item for an adult ALLINC item (because no applicable minor passengers are on the booking), the adult item is treated as standalone with no relationship constraint.</li>
+        <li>INT139 verifies that no ALLINC minor item in the request falls outside the permitted minor items derived from the adult items.</li>
+        <li>If validation fails, INT139 rejects the request with a specific error. If validation passes, INT139 proceeds with the price-to-book flow.</li>
+      </ul>
+    </td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>Consumer has completed price-to-book via INT139. Consumer submits a booking request containing at least one ALLINC item.</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>Validate ALLINC adult–minor combination at booking time (INT140)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT140 – Book Items with ALLINC items in the request.</li>
+        <li>INT140 applies the same adult–minor combination validation as INT139 (UC-002) at booking time.</li>
+        <li>If validation fails, the booking is rejected with a specific error. If validation passes, INT140 proceeds with the booking flow.</li>
+      </ul>
+    </td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>UC-004</td>
+    <td>Consumer has a booking with at least one ALLINC item purchased. Consumer submits a refund request containing at least one ALLINC item.</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>Validate ALLINC adult–minor combination at refund time (INT137)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT137 – Refund Item with ALLINC items in the refund request.</li>
+        <li>INT137 determines which purchased ALLINC items have an adult–minor relationship, based on booking data.</li>
+        <li>For each adult ALLINC item in the refund request, INT137 derives the expected related minor item.</li>
+        <li>INT137 verifies that the refund request does not span more than one related adult–minor pair.</li>
+        <li>INT137 verifies that any ALLINC minor item in the refund request is the expected related minor of an adult item also in the request.</li>
+        <li>If a related minor item is expected and applicable passengers hold it, INT137 verifies it is included in the refund request.</li>
+        <li>If validation fails, INT137 rejects the request with a specific error. If validation passes, INT137 proceeds with the refund flow.</li>
+      </ul>
+    </td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>UC-005</td>
+    <td>Consumer has an existing booking with purchased ALLINC items. DTS <code>getBookings</code> (R113) returns relationship data for purchased items (dependent on DTS tickets RES2-29207 and RES2-29208).</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>Retrieve booking details with adult–minor ALLINC relationship data (INT142)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT142 – Booking Details.</li>
+        <li>INT142 retrieves the purchased items from DTS and classifies each ALLINC item as adult or minor.</li>
+        <li>Each adult ALLINC item is enriched with the list of its related minor items (<code>relatedMinorItems</code>).</li>
+        <li>Each minor ALLINC item is enriched with the list of its related adult items (<code>relatedAdultItems</code>).</li>
+        <li>This relationship data is not currently returned to the consumer — this change adds it for the first time.</li>
+      </ul>
+    </td>
+    <td>Open: dependent on DTS tickets RES2-29207 and RES2-29208. Chiara/Filippo to retest the applicability field and raise a bug if still missing.</td>
+  </tr>
+  <tr>
+    <td>UC-006</td>
+    <td>Consumer submits a price-to-book or booking request containing an ALLINC item with price basis "P" (per passenger).</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>ALLINC passenger-count authorisation at price-to-book / book (INT139 / INT140)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT139 – PriceToBook Items or INT140 – Book Items with an ALLINC item priced per passenger.</li>
+        <li>The integration determines which passengers on the booking are eligible for the item, based on age and applicability rules defined by DTS.</li>
+        <li>Passengers who do not meet any eligibility criteria are skipped.</li>
+        <li>The request must include all eligible passengers — partial passenger requests are not permitted.</li>
+        <li>If no applicable passengers exist for the item, the request is considered valid without requiring the item.</li>
+        <li>If any eligible passenger is absent from the request, the request is rejected.</li>
+      </ul>
+    </td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>UC-007</td>
+    <td>An ALLINC item has been purchased for one or more passengers in a booking. Consumer submits a refund request for an ALLINC item.</td>
+    <td>B2C consumer (MyMSC front end or third-party client)</td>
+    <td>ALLINC refund remaining passengers validation (INT137)</td>
+    <td>
+      <ul>
+        <li>Consumer calls INT137 – Refund Item for an ALLINC item.</li>
+        <li>INT137 identifies all passengers in the booking who hold the same ALLINC item (across all prebookings).</li>
+        <li>All passengers holding the item must be included in the refund request — partial passenger refunds for ALLINC items are not permitted.</li>
+        <li>If any passenger holding the item is absent from the request, the refund is rejected.</li>
+        <li>If all relevant passengers are present, the refund flow proceeds.</li>
+      </ul>
+    </td>
+    <td>—</td>
+  </tr>
+</table>
+
+<!-- SA-owned sections -->
+<h2>Solution Overview</h2>
+<p>[SA-OWNED SECTION — DO NOT MODIFY. To be completed by the Solution Architect.]</p>
+
+<h2>Involved Interfaces</h2>
+<p>[SA-OWNED SECTION — DO NOT MODIFY. To be completed by the Solution Architect.]</p>
+
+<h2>Sequence Diagrams</h2>
+<p>[SA-OWNED SECTION — DO NOT MODIFY. To be completed by the Solution Architect.]</p>
+
+<!-- Non-Functional Requirements -->
+<h2>Non-Functional Requirements</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr><th>ID</th><th>INTERFACE</th><th>CATEGORY</th><th>REQUIREMENT</th><th>PRIORITY</th></tr>
+  <tr>
+    <td>NFR-001</td>
+    <td>INT130 – Get Onboard Services</td>
+    <td>Backward Compatibility</td>
+    <td>Deprecated CMS-sourced relationship fields must continue to be returned in the INT130 response during the migration window, alongside new DTS-sourced fields, to avoid breaking existing consumers.</td>
+    <td>High</td>
+  </tr>
+  <tr>
+    <td>NFR-002</td>
+    <td>INT130, INT137, INT139, INT140, INT142</td>
+    <td>Observability</td>
+    <td>All validation rejections (invalid combination, missing pax, excess related items) must be logged at WARN level with sufficient context (itemCode, paxIds, bookingId) to support incident investigation. [TO BE CONFIRMED: logging standard and correlation ID requirements.]</td>
+    <td>Medium</td>
+  </tr>
+</table>
+
+<!-- Monitoring and Alerting Guidelines -->
+<h2>Monitoring and Alerting Guidelines</h2>
+<p>[SA-OWNED SECTION — DO NOT MODIFY. To be completed by the Solution Architect.]</p>
+
+<!-- Test Scenarios & Acceptance Criteria -->
+<h2>Test Scenarios &amp; Acceptance Criteria</h2>
+<table border="1" cellpadding="5" cellspacing="0">
+  <tr>
+    <th>Use Case</th>
+    <th>Test Cases</th>
+    <th>Acceptance Criteria</th>
+    <th>Test Data</th>
+  </tr>
+  <tr>
+    <td>UC-001</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given a valid session and a sailing with an ALLINC adult item in DTS with a non-null <code>linked-item-code</code>, When the consumer calls INT130 – Get Onboard Services (Available Items), Then the response contains the adult ALLINC item with <code>relatedMinorItems</code> populated from the DTS <code>linked-item-code</code> value, and both new DTS-sourced fields and deprecated CMS relationship fields are returned.<br><br>
+      <strong>HAPPY PATH</strong> — Given a sailing with a linked ALLINC adult–minor pair in DTS, When the consumer calls INT130, Then the minor item response includes <code>relatedAdultItems</code> populated via reverse lookup of the adult item whose <code>linked-item-code</code> equals the minor item code.<br><br>
+      <strong>ALT PATH</strong> — Given a sailing with an ALLINC item that has no <code>linked-item-code</code> in DTS, When the consumer calls INT130, Then the item is returned with <code>relatedMinorItems</code> or <code>relatedAdultItems</code> as an empty array or null, with no unhandled exception.<br><br>
+      <strong>ERROR</strong> — Given a valid sailing reference but DTS /obs/prices is unavailable, When the consumer calls INT130, Then INT130 returns an appropriate error response with no partial or malformed data.
+    </td>
+    <td>
+      Adult ALLINC item: HTTP 200; <code>relatedMinorItems</code> = [DTS <code>linked-item-code</code> value]; deprecated CMS fields also present.<br><br>
+      Minor ALLINC item: HTTP 200; <code>relatedAdultItems</code> populated with the code of the adult item that references it; contains exactly one entry.<br><br>
+      No linked-item-code: HTTP 200; relationship array is empty/null; no 5xx error.<br><br>
+      DTS error: HTTP 502/503 [TO BE CONFIRMED]; error message in response body; no null-pointer exception.
+    </td>
+    <td>
+      Sailing with at least one ALLINC adult item in DTS with a non-null <code>linked-item-code</code>; DTS /obs/prices returns <code>obs-type = ALLINC</code>.<br><br>
+      Sailing with an ALLINC adult–minor pair where adult <code>linked-item-code</code> = minor item code; DTS applicability flags correctly classify each item.<br><br>
+      Sailing with an ALLINC item where DTS <code>linked-item-code</code> is absent or null.<br><br>
+      Test environment or mock where DTS /obs/prices returns a 5xx error or timeout.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-002</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given an ALLINC adult item and its permitted minor item (adult <code>linked-item-code</code> = minor code in DTS), When the consumer calls INT139 – PriceToBook Items with both item codes, Then the validation passes and price-to-book proceeds without error.<br><br>
+      <strong>ALT PATH</strong> — Given an ALLINC adult item with no minor item in the request, When the consumer calls INT139, Then validation passes and price-to-book proceeds (no minor item validation error raised).<br><br>
+      <strong>ERROR</strong> — Given an ALLINC minor item whose code is not in the <code>linked-item-code</code> of any adult ALLINC item in the request, When the consumer calls INT139, Then the request is rejected with a specific error indicating the invalid combination.<br><br>
+      <strong>ERROR</strong> — Given ALLINC adult item A and ALLINC minor item B where B is linked to adult item C (not A) in DTS, When the consumer calls INT139 with adult A and minor B, Then the request is rejected because minor B is not in <code>allowedMinorItems</code> derived from adult A.
+    </td>
+    <td>
+      Valid pair: HTTP 200; no ALLINC combination error; <code>allowedMinorItems</code> built correctly from adult <code>linked-item-code</code>.<br><br>
+      Adult only: HTTP 200; no validation error for absent minor.<br><br>
+      Invalid minor: HTTP 422; error message identifies the invalid combination; no DTS price-to-book call made.<br><br>
+      Mismatched minor: HTTP 422; <code>allowedMinorItems</code> from adult A does not contain minor B; request rejected.
+    </td>
+    <td>
+      ALLINC adult–minor pair in DTS where adult <code>linked-item-code</code> = minor item code; include both codes in the request payload.<br><br>
+      ALLINC adult item in DTS; submit only the adult item code in the request.<br><br>
+      ALLINC minor item whose code does not appear in the <code>linked-item-code</code> of any adult item in the request.<br><br>
+      Two ALLINC adult items each with different minor <code>linked-item-code</code> values; submit adult A with the minor linked to adult C.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-003</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given an ALLINC adult item and its permitted minor item, When the consumer calls INT140 – Book Items with both codes, Then the same validation logic as INT139 passes and the booking is placed with DTS.<br><br>
+      <strong>ERROR</strong> — Given an ALLINC adult item and a minor item not linked to it in DTS, When the consumer calls INT140, Then the request is rejected with the same error format as INT139 and no booking record is created in DTS.
+    </td>
+    <td>
+      Valid pair: HTTP 200; DTS booking call is made; same validation logic as INT139 passes.<br><br>
+      Invalid minor: HTTP 422; DTS booking call is NOT made; error message matches INT139 format.
+    </td>
+    <td>
+      Reuse ALLINC adult–minor pair from UC-002 happy path; confirm DTS accepts the booking.<br><br>
+      Reuse invalid minor test data from UC-002 error path; confirm no booking record is created in DTS.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-004</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given a booking with a purchased ALLINC adult–minor pair where getBookings returns <code>LinkedItemCode</code> and <code>ItemPaxApplicability</code>, and all passengers holding the minor item are in the request, When the consumer calls INT137 – Refund Item with both item codes, Then the validation passes and the refund is processed.<br><br>
+      <strong>ERROR</strong> — Given an ALLINC adult item A and minor item B where B is not in <code>expectedMinorItems</code> derived from adult A's <code>LinkedItemCode</code>, When the consumer calls INT137, Then the request is rejected with a specific error identifying the invalid minor item.<br><br>
+      <strong>ERROR</strong> — Given a DTS state where an adult item's <code>LinkedItemCode</code> produces more than one expected minor item, When the consumer calls INT137, Then the request is rejected because <code>expectedMinorItems</code> contains more than 1 value.
+    </td>
+    <td>
+      Valid pair: HTTP 200; <code>expectedMinorItems</code> built correctly; minor item matches; all relevant passengers present; refund processed.<br><br>
+      Invalid minor: HTTP 422; error message references the invalid minor item; refund not processed.<br><br>
+      Multiple minors: HTTP 422; error message references the at-most-one constraint; refund not processed.
+    </td>
+    <td>
+      Booking with a purchased ALLINC adult–minor pair; getBookings returns <code>LinkedItemCode</code> and <code>ItemPaxApplicability</code> for both items; all passengers holding the minor are included in the request.<br><br>
+      Booking where adult item A has <code>LinkedItemCode</code> pointing to minor C (not B); submit adult A + minor B in the refund request.<br><br>
+      [TO BE CONFIRMED: whether DTS can produce a state where a single adult item yields more than one <code>LinkedItemCode</code> in getBookings — prepare test data if confirmed.]
+    </td>
+  </tr>
+  <tr>
+    <td>UC-005</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given a booking with a purchased ALLINC adult item and DTS getBookings returning <code>LinkedItemCode</code> and <code>ItemPaxApplicability</code>, When the consumer calls INT142 – Booking Details, Then the adult item in the response includes <code>relatedMinorItems</code> populated with the DTS <code>LinkedItemCode</code> value.<br><br>
+      <strong>HAPPY PATH</strong> — Given a booking with a purchased ALLINC minor item and DTS returning the same fields, When the consumer calls INT142, Then the minor item includes <code>relatedAdultItems</code> populated with the DTS <code>LinkedItemCode</code> value.<br><br>
+      <strong>ALT PATH</strong> — Given DTS has not yet delivered <code>ItemPaxApplicability</code> (pending RES2-29207 / RES2-29208), When the consumer calls INT142, Then the response returns purchased items without ALLINC relationship fields, with no null-pointer exception or 5xx error.<br><br>
+      <strong>ERROR</strong> — Given a valid booking reference but DTS getBookings is unavailable, When the consumer calls INT142, Then INT142 returns an appropriate error response with no partial data.
+    </td>
+    <td>
+      Adult item: HTTP 200; <code>relatedMinorItems = [LinkedItemCode]</code> (size-1 array); DTS tickets RES2-29207 and RES2-29208 must be delivered.<br><br>
+      Minor item: HTTP 200; <code>relatedAdultItems = [LinkedItemCode]</code> (size-1 array).<br><br>
+      Missing DTS field: HTTP 200; <code>relatedAdultItems</code> and <code>relatedMinorItems</code> omitted or null; no 5xx error; all other item fields returned correctly.<br><br>
+      DTS error: HTTP 502/503 [TO BE CONFIRMED]; error message in response body; no unhandled exception.
+    </td>
+    <td>
+      Booking in test environment with a purchased ALLINC adult–minor pair; confirm DTS getBookings returns <code>LinkedItemCode</code> and <code>ItemPaxApplicability</code>. Dependent on DTS tickets RES2-29207 and RES2-29208.<br><br>
+      Same booking as above; verify minor item in response has <code>relatedAdultItems</code> populated.<br><br>
+      Test environment where DTS has not yet delivered RES2-29207/RES2-29208; confirm graceful handling of absent <code>ItemPaxApplicability</code>.<br><br>
+      Simulate a DTS getBookings outage or use a mock returning a 5xx error.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-006</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given an ALLINC item with priceBasis = "P" and a booking with 2 eligible adult passengers, When the consumer calls INT139 with both paxIds in the request and age eligibility is satisfied, Then the request proceeds without error.<br><br>
+      <strong>ERROR</strong> — Given an ALLINC item with priceBasis = "P" and a booking with 2 eligible adult passengers, When the consumer calls INT139 with only 1 paxId, Then the request is rejected indicating a missing eligible passenger.
+    </td>
+    <td>
+      All eligible pax: HTTP 200; age eligibility applied using DTS applicability flags; all eligible paxIds present; request proceeds.<br><br>
+      Missing pax: HTTP 422; error message references the missing eligible passenger; age eligibility rules applied correctly.
+    </td>
+    <td>
+      Booking with 2 adult passengers both eligible for the ALLINC item (ages satisfying DTS applicability flags); submit both paxIds in the request.<br><br>
+      Same booking; submit only 1 paxId in the request.
+    </td>
+  </tr>
+  <tr>
+    <td>UC-007</td>
+    <td>
+      <strong>HAPPY PATH</strong> — Given a booking where only 1 passenger holds the ALLINC ItemCode, When the consumer calls INT137 for a refund of that passenger, Then all relevant PaxIDs with the ItemCode are present and the refund proceeds.<br><br>
+      <strong>ERROR</strong> — Given a booking where 2 passengers hold the same ALLINC ItemCode (across different prebookings), When the consumer calls INT137 with only 1 of the 2 paxIds, Then the request is rejected indicating that all passengers holding the ALLINC item must be included.
+    </td>
+    <td>
+      Single passenger: HTTP 200; all PaxIDs with matching ItemCode present; no missing-passenger error; refund processed.<br><br>
+      Missing passenger: HTTP 422; error references the missing paxId; PaxIDs checked across all prebookings (not only the one in the request); refund not processed.
+    </td>
+    <td>
+      Booking where only 1 passenger holds the ALLINC ItemCode; submit refund for that passenger.<br><br>
+      Booking where 2 passengers hold the same ALLINC ItemCode in different prebookings if possible; submit refund for only 1 of them.
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

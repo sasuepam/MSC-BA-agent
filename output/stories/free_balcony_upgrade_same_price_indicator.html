@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BA Stories – Free Balcony Upgrade: Same Price as Next Macro Category Indicator</title>
+</head>
+<body>
+
+<h1>BA Stories – Free Balcony Upgrade: Same Price as Next Macro Category Indicator</h1>
+
+<h2>Splitting Rationale</h2>
+<p>All four interfaces (INT002.1, INT002.2, INT002.3, INT002.4) are existing interfaces receiving the same change: adding the samePriceAsNextMacroCategory boolean indicator to the lowestPricedCategory of each response entry. Same change, same logical feature — consolidated into one CR. No new interfaces. No ADF interfaces involved.</p>
+
+
+<h2>CR: Add Same Price as Next Macro Category Indicator to Booking Funnel Search APIs</h2>
+
+<p><strong>Type:</strong> CR</p>
+<p><strong>Summary:</strong> Add samePriceAsNextMacroCategory indicator to booking funnel search APIs</p>
+
+<p><strong>Description:</strong></p>
+<p><strong>Change Scope:</strong> Add the samePriceAsNextMacroCategory boolean indicator to the lowestPricedCategory of each entry across four existing booking funnel search interfaces: INT002.1 Get Price Lists, INT002.2 Get Cabin Types, INT002.3 Get Cabin Preferences, and INT002.4 Get Categories. The value is sourced from DtsSearchCruisesResponseB2C.Itinerary.Cruises[N].SamePriceAsNextMacroCategory and must be transformed to a boolean by MuleSoft before being included in the response.</p>
+
+<p><strong>Rationale:</strong> The booking funnel website requires this indicator to determine whether the Free Balcony Upgrade promotion applies to a given cabin entry — specifically, whether the lowest price for that entry matches the price of the next higher macro category. Without this flag, the website cannot apply the auto-selection and upgrade prompt logic.</p>
+
+<p><strong>Resources:</strong></p>
+<ul>
+  <li>MuleSoft Requirements Page:</li>
+  <li>High Level Architecture Document:</li>
+  <li>API Documentation:</li>
+  <li>Confluence Page:</li>
+</ul>
+
+<p><strong>Acceptance Criteria (BDD):</strong></p>
+
+<p><strong>Scenario 1: SamePriceAsNextMacroCategory is true</strong><br>
+Given a valid request is made to INT002.1, INT002.2, INT002.3, or INT002.4 and DTS returns SamePriceAsNextMacroCategory as true for one or more entries<br>
+When MuleSoft processes the DTS response<br>
+Then the samePriceAsNextMacroCategory indicator is included in the lowestPricedCategory of the relevant entries with a boolean value of true</p>
+
+<p><strong>Scenario 2: SamePriceAsNextMacroCategory is false</strong><br>
+Given a valid request is made to INT002.1, INT002.2, INT002.3, or INT002.4 and DTS returns SamePriceAsNextMacroCategory as false for all entries<br>
+When MuleSoft processes the DTS response<br>
+Then the samePriceAsNextMacroCategory indicator is included in the lowestPricedCategory of each entry with a boolean value of false</p>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BA Stories — CRM Marketing Automation – Calculated Fields: Booking B2B or B2C</title>
+</head>
+<body>
+
+<h1>BA Stories — CRM Marketing Automation – Calculated Fields: Booking B2B or B2C</h1>
+<p>Initiative: CRM Marketing Automation – Calculated Fields: Booking B2B or B2C | Generated: 12/Aug/2026</p>
+<p>Source spec: functional_spec_crm_booking_b2b_b2c_calculated_fields.html</p>
+<p>Stories generated: 1 CR | 0 User Stories | 0 ADF interfaces excluded</p>
+
+<hr/>
+
+<!-- ═══════════════════════════════════════════════════════
+     CR-001
+════════════════════════════════════════════════════════ -->
+
+<h1>CR: Add B2B/B2C Boolean Indicator to Booking Event Integrations (INT-100, INT-025, INT-024.1)</h1>
+<p>Interfaces: INT-100, INT-025, INT-024.1 | Initiative: CRM Marketing Automation – Calculated Fields: Booking B2B or B2C | Status: Draft</p>
+
+<h2>Summary</h2>
+<p>
+  Three existing MuleSoft booking event integrations — INT-100 (Booking Event Integration), INT-025 (Booking PAX Change Event Ingestion), and INT-024.1 (Booking Event Integration) — must be updated to pass through a new B2B/B2C boolean field sourced from DTS. The field is derived by DTS from the Booking Channel node in the booking event: true indicates a B2C booking; false indicates a B2B booking. MuleSoft will pass this field through to the CDP without applying any further transformation logic. This change enables the CRM Marketing team to segment customers by booking channel and deliver personalised post-booking communications.
+</p>
+
+<h2>Change Scope</h2>
+<ul>
+  <li>Add data mapping for the new B2B/B2C boolean field (sourced from DTS) to the outbound CDP payload in INT-100.</li>
+  <li>Add data mapping for the new B2B/B2C boolean field (sourced from DTS) to the outbound CDP payload in INT-025.</li>
+  <li>Add data mapping for the new B2B/B2C boolean field (sourced from DTS) to the outbound CDP payload in INT-024.1.</li>
+</ul>
+
+<h2>Interfaces Affected</h2>
+<ul>
+  <li>
+    <strong>INT-100 — Booking Event Integration</strong> (DTS → MuleSoft → CDP)<br/>
+    Add data mapping for B2B/B2C boolean field. No derivation logic in MuleSoft. Field passed as-is from DTS payload to CDP booking profile.
+  </li>
+  <li>
+    <strong>INT-025 — Booking PAX Change Event Ingestion</strong> (DTS → MuleSoft → CDP)<br/>
+    Add data mapping for B2B/B2C boolean field to the booking PAX change event CDP payload. No derivation logic in MuleSoft.
+  </li>
+  <li>
+    <strong>INT-024.1 — Booking Event Integration</strong> (DTS → MuleSoft → CDP)<br/>
+    Add data mapping for B2B/B2C boolean field. No derivation logic in MuleSoft. Field passed as-is from DTS payload to CDP booking profile.
+  </li>
+</ul>
+
+<h2>Rationale</h2>
+<ul>
+  <li>CRM and CDP teams require a B2B/B2C indicator on booking events to enable personalised post-booking marketing communications and audience segmentation based on booking channel.</li>
+  <li>The agent type is intentionally excluded from the B2B/B2C mapping as its cardinality is too complex to map directly to a binary classification.</li>
+  <li>All three interfaces must be updated to ensure a consistent and complete data payload reaches the CDP across all booking event types.</li>
+</ul>
+
+<h2>Resources &amp; Dependencies</h2>
+<ul>
+  <li><strong>DTS</strong> — DTS Team — Must release B2B/B2C boolean field in second pipeline iteration before INT-100, INT-025, and INT-024.1 can be validated end-to-end. Target: end of August 2026.</li>
+  <li><strong>Interface Agreement Pages (Confluence A007, A0086, A87)</strong> — Marketing Team — Must be updated to document the DTS source field, target CDP field name, and any transformation logic for each of INT-100, INT-025, INT-024.1. Field names and JSON paths are [TO BE CONFIRMED].</li>
+  <li><strong>CRM2-11045</strong> — CRM Programme — Parent CRM ticket for this feature. Link: [TO BE CONFIRMED].</li>
+  <li><strong>DTTP25-41761</strong> — DTTP Programme — DTTP dependency ticket for development. Link: [TO BE CONFIRMED].</li>
+</ul>
+
+<h2>Acceptance Criteria</h2>
+
+<p>
+  <strong>GIVEN</strong> a valid booking event is published by DTS to INT-100, INT-025, or INT-024.1 with the B2B/B2C boolean field set to true (B2C booking)<br/>
+  <strong>WHEN</strong> the respective integration processes the event<br/>
+  <strong>THEN</strong> the outbound CDP payload contains the B2B/B2C boolean field with value true, and the event is processed successfully.
+</p>
+
+<p>
+  <strong>GIVEN</strong> a valid booking event is published by DTS to INT-100, INT-025, or INT-024.1 with the B2B/B2C boolean field set to false (B2B booking)<br/>
+  <strong>WHEN</strong> the respective integration processes the event<br/>
+  <strong>THEN</strong> the outbound CDP payload contains the B2B/B2C boolean field with value false, and the event is processed successfully.
+</p>
+
+<p>
+  <strong>GIVEN</strong> a booking event is published by DTS to INT-100, INT-025, or INT-024.1 without the B2B/B2C boolean field present in the payload (field absent or null)<br/>
+  <strong>WHEN</strong> the respective integration processes the event<br/>
+  <strong>THEN</strong> the integration does not fail or raise a processing error; the CDP payload is forwarded successfully with the B2B/B2C field absent or null; and a warning or informational log entry is written indicating the field was not present.
+</p>
+
+<p>
+  <strong>GIVEN</strong> a booking event is published by DTS to INT-100, INT-025, or INT-024.1 with the B2B/B2C field containing a non-boolean value (e.g. a string or integer)<br/>
+  <strong>WHEN</strong> the respective integration processes the event<br/>
+  <strong>THEN</strong> the integration does not throw an unhandled exception; an error or warning is logged; the event is either forwarded with the field nulled out or routed to a dead-letter / error queue per the existing error handling policy; and no data loss occurs for other fields in the booking event payload.
+</p>
+
+</body>
+</html>

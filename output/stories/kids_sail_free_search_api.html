@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BA Stories – Kids Sail Free Search API</title>
+</head>
+<body>
+
+<h1>BA Stories – Kids Sail Free Search API</h1>
+
+<h2>Splitting Rationale</h2>
+<p>All three interfaces involved (INT002.1, INT002.2, INT002.3) are existing interfaces receiving the same change: exposing the Kids Sail Free indicator from DTS in the lowest priced category of each response. Same change, same logical feature — consolidated into one CR. No new interfaces. No ADF interfaces involved.</p>
+
+
+<h2>CR: Expose Kids Sail Free Indicator in Booking Funnel Search APIs</h2>
+
+<p><strong>Type:</strong> CR</p>
+<p><strong>Summary:</strong> Expose Kids Sail Free indicator in booking funnel search APIs</p>
+
+<p><strong>Description:</strong></p>
+<p><strong>Change Scope:</strong> Add the Kids Sail Free indicator to the responses of three existing booking funnel search interfaces — Get Price Lists (INT002.1), Get Cabin Types (INT002.2), and Get Cabin Preferences (INT002.3). For each interface, the indicator is mapped from the DTS response onto the lowest priced category of each entry (price type, cabin type, or cabin preference respectively). The value is passed through as-is from DTS with no transformation. If the field is absent in the DTS response, MuleSoft defaults the value to false.</p>
+<p><strong>Rationale:</strong> The booking funnel website requires the Kids Sail Free availability flag in order to conditionally display the promotion on qualifying package cards. Without this indicator in the MuleSoft response, the website cannot determine whether the promotion applies and cannot render the correct promotional content.</p>
+
+<p><strong>Resources:</strong></p>
+<ul>
+  <li>MuleSoft Requirements Page:</li>
+  <li>High Level Architecture Document:</li>
+  <li>API Documentation:</li>
+  <li>Confluence Page:</li>
+</ul>
+
+<p><strong>Acceptance Criteria (BDD):</strong></p>
+
+<p><strong>Scenario 1: KSF indicator present in DTS response</strong><br>
+Given a valid request is made to INT002.1, INT002.2, or INT002.3 and DTS returns the Kids Sail Free indicator for one or more entries<br>
+When MuleSoft processes the DTS response<br>
+Then the Kids Sail Free indicator is included in the response for each relevant entry with the value passed through exactly as received from DTS</p>
+
+<p><strong>Scenario 2: KSF field absent from DTS response</strong><br>
+Given a valid request is made to INT002.1, INT002.2, or INT002.3 and DTS does not include the Kids Sail Free field<br>
+When MuleSoft processes the DTS response<br>
+Then the Kids Sail Free indicator is returned as false for all entries and the response is returned without error</p>
+
+</body>
+</html>
