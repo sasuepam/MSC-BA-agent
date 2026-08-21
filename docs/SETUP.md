@@ -91,13 +91,28 @@ Your project root should contain:
 ```
 MSC-BA-agent/
 ├── agents/
+│   ├── functional-spec-generator.md
+│   ├── ba-story-generator.md
+│   ├── ba-validator.md
+│   ├── intake-preprocessor.md
+│   ├── jira-publisher.md
+│   └── confluence-publisher.md
 ├── .claude/
 │   └── commands/
 │       ├── ba-workflow.md
 │       ├── ba-amend.md
+│       ├── intake.md
+│       ├── ba-metrics.md
+│       ├── ba-metrics-report.md
 │       └── setup.md          ← the /setup wizard lives here
 ├── docs/
 ├── knowledge/
+│   └── templates/
+│       ├── functional_specification_template.html
+│       ├── change_request_template.html
+│       ├── user_story_template.html
+│       ├── spec_validator.py    ← pre-save validator for specs
+│       └── story_validator.py   ← pre-save validator for stories
 ├── mcp/
 ├── output/
 ├── CLAUDE.md
@@ -224,6 +239,17 @@ The verify mode will:
 If the MCP server is not reachable, check that the server Command Prompt or PowerShell window (Step 5) is still open and running.
 
 Once `/setup verify` passes, you are fully set up. Type `/ba-workflow` to start.
+
+**Optional: verify Python validators**
+
+The template validators run automatically during spec and story generation. To confirm they work on your machine:
+
+```
+python3 knowledge/templates/spec_validator.py --help
+python3 knowledge/templates/story_validator.py --help
+```
+
+If either command fails with `ModuleNotFoundError`, Python 3.12+ is not on your PATH. See the [Troubleshooting](#9-troubleshooting) section.
 
 > **Reminder:** always launch Codemie using `codemie-claude`, not `claude`. See the note at the top of this guide.
 

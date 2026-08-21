@@ -1,151 +1,145 @@
 # Recommendations & Best Practices
 
-Lessons from 6 rounds of production testing. Read this before your first real interface.
+Guidance for getting the best results from the BA Agent.
 
 ---
 
-## Before You Start Any Interface
+## Before You Start Any Feature
 
-### Always run /import-ia first
-Before generating any pages, run `/import-ia` with the IA page ID. It shows:
-- Exact field counts (verify these match what you see in Confluence)
-- Headers found (check none are blocked/hallucinated)
-- Downstream systems (if 2+ → you'll need 2+ SAPI pages)
-- Deep nesting warnings (fields you'd otherwise miss)
+### Use intake for PDFs and meeting recordings
+If your input materials include PDFs or meeting recordings (VTT + video), run `/intake` before the spec phase. The intake phase produces clean, structured Markdown that the spec generator reads far more reliably than a raw binary.
 
-This 30-second check prevents 90% of generation issues.
+For plain text, emails, or Confluence URLs — you can skip intake and paste directly.
 
-### Confirm field counts before generation
-After `/import-ia`, Claude shows "Found 87 request fields, 64 response fields." 
-Open the actual IA in Confluence and count — or spot-check 10 fields. 
-If the counts diverge significantly, use `confluence_get_markdown` to inspect manually before proceeding.
+### Provide everything, not just a summary
+The agent cannot invent content. A full email thread is better than a paraphrase. A Confluence page URL is better than "the page says X". Multiple sources are better than one — paste the stakeholder email, link the Confluence page, and attach the meeting notes all at once.
+
+### Resolve TBCs before generating stories
+Stories inherit `[TO BE CONFIRMED]` fields from the spec, which then become BLOCKERs in validation. It is faster to fill in TBCs in the spec first than to resolve them as individual validation flags later.
+
+```
+List all [TO BE CONFIRMED] markers currently in the spec with the section and field name.
+```
 
 ---
 
-## During Generation
+## During Spec Generation
 
-### One page at a time — don't rush
-The tool generates pages sequentially on purpose. Review each preview carefully before approving:
-- MUL: check every field in Request Body and Response Body sections
-- EAPI: verify all request fields are mapped, no extra headers
-- PAPI: check the Overall Mapping section — it must have one row per IA field
-- SAPI: confirm it covers only ONE downstream system's endpoint
+### Check the template validation result
+The agent runs `spec_validator.py` before saving the spec. If it reports violations — even after an auto-retry — review them before moving to stories. A structural issue in the spec will cascade into story validation BLOCKERs.
 
-### Use /preview before every publish
-The preview renders the Confluence HTML in a browser panel. Issues visible in preview:
-- Tables that don't render (malformed HTML)
-- Missing sections
-- Obvious hallucinated content
-- Layout problems
+### Don't manually edit the spec HTML after generation
+If the spec needs changes, ask the agent to make them in Codemie. Manual HTML edits can break table structure or introduce inline styles that `spec_validator.py` will flag. If you must edit manually, run `/ba-workflow` → option 4 → choose automated validation to recheck structure afterwards.
 
-Takes 10 seconds. Worth it every time.
+### Name the MuleSoft API explicitly in use cases
+The Use Cases section requires the responsible API in the "Functionality Expected" column. If your source materials don't name it clearly, tell the agent:
 
-### Validate immediately after generation
-Right after all 4 pages are created, run `/validate` with all page IDs and the IA.
-The coverage report will show exactly what's missing or wrong while the context is fresh.
+```
+The responsible MuleSoft API for all use cases in this feature is [API name].
+```
+
+---
+
+## During Story Generation
+
+### Verify the CR / US split before proceeding
+After stories are generated, ask the agent to explain its split decisions before moving to validation:
+
+```
+Walk me through why each interface was given a CR versus a US.
+```
+
+This catches misclassifications early — it is much faster to correct a story type before validation than after a round of BLOCKERs.
+
+### Check the ADF exclusion list
+After generation, verify the excluded interfaces list matches your expectations. If a non-ADF interface was accidentally excluded, correct it before publishing:
+
+```
+INT[number] was excluded. Can you confirm whether it was ADF-prefixed or explain why?
+```
+
+### Use direct input for quick stories
+If you only need stories and don't need a full spec (e.g. for a small change request), use direct input mode — no spec file needed. Provide a list of interfaces and brief requirements and the agent will generate and validate stories directly.
+
+---
+
+## Validation
+
+### Choose your validation mode deliberately
+After spec and story generation the agent asks how you'd like to review output. Don't default to "Skip" for complex features:
+
+- **Conversational** — fastest; good for features you know well and simple changes
+- **Automated** — catches structural and traceability issues you might miss in chat
+- **Both** — safest for complex features or specs going to a new Solution Architect
+
+### Run structural rules separately from content rules
+If you suspect a template issue, run structural rules first and resolve them before content rules. Content BLOCKERs in a structurally broken file are harder to reason about.
+
+```
+Run validation — structural rules only (Rules 9–14).
+```
+
+### Always re-validate after amendments
+The amend phase can resolve some flags while inadvertently introducing others (e.g. editing a BDD criterion to fix vague language but accidentally breaking the Given/When/Then format). A quick re-validation confirms you're clean before publishing.
 
 ---
 
 ## Known Issues to Watch For
 
-### SAPI scope bleed (most common critical issue)
-**Symptom:** SAPI page has 2x expected rows, contains fields from another downstream system.
-**Cause:** arch-reader extracted both systems' mappings and sapi-generator included both.
-**Fix:** Run `/validate` — it catches this. Then `/update` to remove wrong-system rows.
-**Prevention:** After SAPI generation, manually check that every row in Data Mapping maps to `sapi_path` only.
+### Stories with vague BDD language (Rule 14 WARNING → BLOCKER)
+**Symptom:** Acceptance criteria contain phrases like "works correctly", "system responds", "data is saved".
+**Cause:** The model sometimes generates plausible but untestable BDD criteria when source materials don't provide specific expected outcomes.
+**Fix:** Rule 14 catches these. In `/ba-amend`, provide the specific measurable outcome when prompted.
+**Prevention:** If your input materials include explicit expected outcomes (e.g. HTTP response codes, field values, timing SLAs), paste them in. The more specific the input, the more testable the generated criteria.
 
-### Hallucinated MSC headers
-**Symptom:** MUL or EAPI page contains `MSC-Agency-Id`, `MSC-Market-Code`, etc. not in the IA.
-**Cause:** These headers appear in other MSC interfaces, and the model sometimes adds them.
-**Fix:** Pre-write hook catches these automatically. If a page already exists with them, `/validate` flags them.
-**Prevention:** The pre-write hook blocks them. If you see a hook warning about blocked headers, always check if that header is actually in the IA before overriding.
+### TBC fields in critical positions (Rule 1 BLOCKER)
+**Symptom:** Summary field or User Story Statement contains `[TO BE CONFIRMED]`.
+**Cause:** The model could not derive the value from input materials.
+**Fix:** Provide the value explicitly during the amend phase.
+**Prevention:** Before generating stories, ask the agent to list all TBC markers in the spec. Resolve the ones in Feature Summary and Business Requirements first — they feed directly into story summaries and statements.
 
-### Requiredness text simplified
-**Symptom:** Long conditional string like "Optional - Required for Lead Passenger if payment type is KLARNA" is shortened to just "Conditional".
-**Cause:** The model summarizes rather than copies.
-**Fix:** `/validate` catches requiredness mismatches. `/update` to fix with exact IA text.
-**Prevention:** After generation, scan the Required column of MUL for any rows that look "too short" for what you know is a conditional field.
+### SA-owned sections flagged as empty (Rule 10)
+**Symptom:** Rule 10 flags a missing or empty SA section.
+**Cause:** The spec was generated on a feature where no SA has contributed yet, or the spec template was not read before generation.
+**Fix:** These sections are SA responsibility. Add the standard placeholder text: `Populated by Solution Architect.` This satisfies Rule 10 while making the ownership clear.
+**Prevention:** The spec generator reads the template before generating. If Rule 10 still fires, it means the SA section placeholder is missing entirely — check that the spec template is intact.
 
-### Deep nested response fields missing
-**Symptom:** `_warnings[]` has 4 rows but the IA has 16 (missing `_warnings[].causes[].source.name`, etc.)
-**Cause:** The model stops extracting at 2 levels of nesting.
-**Fix:** `/import-ia` now warns about deep nesting. After generation, manually count `_warnings` rows vs IA.
-**Prevention:** If IA has `_warnings[].causes[].source.layer` in the response table — that's 5 levels. Explicitly tell Claude: "The response has deep nesting — make sure to include all levels."
-
----
-
-## Working With Real Interfaces (Not INT004.4)
-
-### First time with a new interface
-1. Run `/import-ia` with the IA page ID
-2. Read the output carefully — look for anything unexpected
-3. Run `/status` to see what's already done
-4. Start with `/generate` only if nothing exists yet
-5. If pages exist but are outdated → use `/validate` first to see the gap, then `/propagate`
-
-### When the IA changes mid-design
-1. Read the new IA with `/import-ia` — see what changed
-2. Run `/diff` between old and new IA (if you have the old page ID)
-3. Use `/propagate` to push each changed field across all pages
-4. Run `/validate` at the end to confirm consistency
-
-### Multiple downstream systems
-If the SA shows 2+ downstream systems (e.g., DTS + Datatrans):
-- Expect 2 SAPI pages
-- Tell Claude explicitly: "This interface has 2 downstream systems. Generate separate SAPI pages."
-- After both SAPIs are created, verify each covers only its own system
+### ADF interface slipping into stories (Rule 4 BLOCKER)
+**Symptom:** A story references an ADF-prefixed interface.
+**Cause:** The input materials listed the ADF interface without clearly flagging it as ADF-owned, or the exclusion rule was applied inconsistently.
+**Fix:** In `/ba-amend`, find the Rule 4 flag and choose "Accept fix" to remove the ADF story.
+**Prevention:** If your feature involves a mix of INT and ADF interfaces, call it out explicitly when starting the workflow: "Exclude all ADF-prefixed interfaces. INT-prefixed interfaces only."
 
 ---
 
-## Performance Tips
+## Metrics and Improvement
 
-### Provide all URLs upfront
-The more context you give at the start, the fewer interruptions. Ideal `/generate` input:
-```
-Generate INT006. 
-IA: [url or page ID]
-Functional Spec: [url or page ID]  
-Solution Architecture: [url or page ID]
-Note: 2 downstream systems — ServiceNow and Salesforce.
-```
+### Watch the structural fix ratio in trends
+`/ba-metrics --trend` shows what percentage of amendment fixes were structural (template) vs content. A structural ratio above ~15% suggests input materials are thin — the agent is generating with insufficient context and the template validator is catching structural gaps.
 
-### Use page IDs not URLs
-`4476535093` is faster than the full Confluence URL. Claude accepts both but page IDs are cleaner.
+If structural ratio is high: try running `/intake` preprocessing, or provide more complete input materials before spec generation.
 
-### For incremental work, don't re-read what hasn't changed
-If you're only fixing one field in PAPI, just provide the PAPI page ID. Claude will read it directly rather than re-reading all 4 pages.
+### Use the weekly report for team check-ins
+`/ba-metrics-report` (also auto-generated every Friday at 5pm) gives a feature-by-feature view of iteration counts, template compliance rate, and fix ratios. Useful for spotting patterns — e.g. a specific feature type that consistently needs more amend cycles.
+
+### Track feedback loops per feature
+A feedback loop = one amend + re-validate cycle. More than 2 loops on a feature is a signal to investigate root cause — it usually means input materials were thin, or TBC fields were not resolved before story generation.
 
 ---
 
-## Quality Checklist Before Promoting to Production
+## Publishing
 
-Run through these before moving any page from sandbox to production:
+### Review Document History before SA publishes to production
+The agent adds a Document History row automatically when publishing to Confluence. Review the version number, date, and "Sections Updated" field before the Solution Architect publishes the draft — this row is the audit trail and should be accurate.
 
-- [ ] `/validate` passes with 0 critical issues
-- [ ] All 4 pages created (MUL, EAPI, PAPI, SAPI)
-- [ ] SAPI scope: each SAPI covers exactly one downstream system
-- [ ] No blocked headers in any page
-- [ ] Requiredness text matches IA exactly (especially conditional strings)
-- [ ] Deep nested fields present (count `_warnings` rows if applicable)
-- [ ] EAPI error section: no `causes[]` arrays
-- [ ] PAPI has "Overall Mapping" H3 with one row per IA field
-- [ ] Page titles follow MSC naming format
-- [ ] Pages are under correct sandbox parent IDs
-- [ ] Designer reviewed previews and approved each page
+### Provide all Jira ticket keys upfront
+If you have multiple CRs and USs to publish to Jira, list all ticket keys at once:
 
----
-
-## Getting Help
-
-**In Claude Code:** just ask. Examples:
 ```
-"I'm confused about the SAPI scope — help me understand"
-"What should the source.name be for DTS errors?"
-"Is this page structure correct? [paste HTML snippet]"
+Publish to DTTP25-1234, DTTP25-1235, and DTTP25-1236.
 ```
 
-**Reference implementation:** INT004.4 Klarna pages are in `knowledge/confluence-examples/`. 
-These are the gold standard — compare your generated pages against them.
+This is faster than publishing one ticket at a time and lets the agent confirm story-to-ticket mapping in a single step.
 
-**Design standards:** all 13 official MSC documents are in `knowledge/design-standards/`.
-Claude can answer any question from these, or you can read them directly.
+### Use sandbox Confluence for unfamiliar features
+If this is your first time publishing a feature type you haven't done before, publish to the Confluence sandbox first. Verify the page structure and Document History look correct before publishing to the production space.

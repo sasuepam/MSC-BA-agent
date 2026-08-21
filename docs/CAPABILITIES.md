@@ -1,208 +1,307 @@
-# What This Assistant Can Do
+# What the BA Agent Can Do
 
 A complete picture of capabilities, with examples of what to type.
 
 ---
 
-## 1. Generate Full Page Sets (New Endpoint)
+## 1. Preprocess Raw Input Materials (Intake)
 
-**The big one.** From IA + Functional Spec + Solution Architecture → all 4 Confluence pages.
-
-```
-"Generate pages for INT006. Here's the IA: [url], Functional Spec: [url], SA: [url]"
-"Create MUL, EAPI, PAPI, and SAPI for the new specialty restaurants endpoint"
-"New endpoint: POST /bookings/{id}/hold, here's the IA page ID: 4502819234"
-```
-
-What happens:
-1. Reads all source pages (deterministic extraction — no hallucination)
-2. Shows you what was found: field counts, headers, downstream systems
-3. Generates each page one at a time, showing you a preview
-4. You approve → publishes to sandbox Confluence
-5. Runs coverage check after each page
-6. Final summary with all URLs and quality report
-
-Time savings: **6-10 hours → 1-2 hours**
-
----
-
-## 2. Add or Change Fields
-
-**Daily bread and butter.** No need to regenerate the whole page.
+**Start here when inputs are PDFs or meeting recordings.**
 
 ```
-"Add field couponCode to the MUL page. Here it is: [page_id]"
-"Change passengerInformation.adults.total to Optional in INT004.4"
-"Fix the description for returnPath in the PAPI page"
-"Add 3 new fields from the updated IA to MUL and EAPI"
+/intake
+
+PDF: docs/requirements_free_balcony_upgrade.pdf
+VTT: recordings/kickoff_meeting.vtt
+Video: recordings/kickoff_meeting.mp4
+```
+
+```
+/intake
+
+Confluence page: https://msccruises.atlassian.net/wiki/spaces/DTTP/pages/[id]/[title]
 ```
 
 What happens:
-1. Reads current page
-2. Reads IA to confirm exact field name, type, requiredness
-3. Shows before/after diff
-4. You approve → applies the change
-5. Asks if you want to propagate to other pages
+1. PDFs are extracted using text parsing + AI vision via `distill-doc`
+2. Meeting recordings: VTT transcript enriched with video frame descriptions via `enrich-meeting`
+3. Confluence pages: fetched live, navigation stripped, substantive content preserved
+4. All outputs saved as structured Markdown to `output/intake/`
+5. `intake_summary.md` written with key topics and extraction counts
+
+The intake output files are passed automatically to the spec generator when you run `/ba-workflow` and choose to preprocess first.
+
+**Time saving:** 30–60 min of manual note-taking → 2–5 min of automated extraction.
 
 ---
 
-## 3. Propagate Changes Across All Pages
+## 2. Generate Functional Specifications
 
-**When the IA changes.** Push the change consistently to all layers.
+**The foundation of every feature.** From raw input to a complete 11-section HTML spec.
 
 ```
-"The IA changed couponCode to Required. Update all pages."
-"Propagate: returnPath field added to IA. Push to MUL, EAPI, PAPI."
-"Field renamed from bookingRef to reservationId everywhere"
+/ba-workflow
+1
+
+[paste requirements email here]
+```
+
+```
+/ba-workflow
+1
+
+Requirements: https://msccruises.atlassian.net/wiki/spaces/DTTP/pages/[id]/[title]
+Additional context: [paste stakeholder email]
 ```
 
 What happens:
-1. Reads all 4 pages
-2. Computes the right change for each page's column format (MUL vs EAPI vs PAPI vs SAPI use different table layouts)
-3. Shows diff for every page before touching anything
-4. Applies changes one by one, with confirmation
-5. Validates consistency after all changes
+1. Reads the spec template before generating any content
+2. Reads all source materials (URLs fetched live, files read, text used directly)
+3. Fills all 7 BA-owned sections following the template exactly
+4. Leaves 4 SA-owned sections as placeholders — never overwrites Solution Architect content
+5. Marks any missing information as `[TO BE CONFIRMED]`
+6. Runs `spec_validator.py` before saving — auto-fixes structural issues and retries once
+7. Reports file path, TBC count, and template compliance result
+
+Output: `output/specs/functional_spec_[feature_name].html`
+
+**BA-owned sections filled automatically:** Document History, Reference Documentation, Feature Summary, Business Requirements (BR-### user story format), Use Cases (UC-### with MuleSoft API named), Non-Functional Requirements (NFR-###), Test Scenarios & Acceptance Criteria.
+
+**SA-owned sections — never touched:** Solution Overview, Involved Interfaces, Sequence Diagrams, Monitoring and Alerting Guidelines.
 
 ---
 
-## 4. Validate Consistency
+## 3. Generate Jira-Ready Stories
 
-**Quality gate.** Catch issues before they reach developers.
+**From spec or direct input.** Produces individual `.md` files — one per CR, one per US.
 
 ```
-"Validate INT004.4 — check all pages against the IA"
-"Are MUL and EAPI consistent? MUL: [id], EAPI: [id], IA: [id]"
-"Check for hallucinated fields in this page"
+/ba-workflow
+2
 ```
 
-Output: structured report with severity levels (critical / warning / passing).
+```
+"Generate stories from output/specs/functional_spec_free_balcony_upgrade.html"
+```
 
-Checks:
-- Field presence across all pages vs IA
-- Requiredness exact text match
-- Type consistency
-- Hallucinated headers (MSC-Agency-Id etc.)
-- Known field name traps (promotionalCode vs couponCode)
-- SAPI scope (no cross-system fields)
-- Nested field completeness (3+ levels)
+**Direct input (no spec needed):**
+```
+/ba-workflow
+2
+
+Direct input mode. Interfaces:
+- INT710v2 — Booking Enrichment (new interface)
+- INT025 — Passenger Profile (existing, adding coupon code field)
+- ADF108 — (exclude)
+
+Requirements:
+1. System must support loyalty tier upgrades for balcony cabins
+2. Upgrade eligibility must be evaluated at booking confirmation
+```
+
+What happens:
+1. Reads both CR and US templates before generating
+2. Applies ADF exclusion rule — ADF-prefixed interfaces produce no stories
+3. Applies splitting rules: new interface → US; existing interface change → CR
+4. Generates each story following the template exactly
+5. Runs `story_validator.py` per story before saving — auto-retries once on failure
+6. Saves each story as a separate `.md` file with sequential numbering
+7. Reports CR count, US count, ADF exclusions, and template compliance per story
+
+Output: `output/stories/[feature]_cr_001.md`, `[feature]_us_001.md`, etc.
 
 ---
 
-## 5. Generate RAML Specifications
+## 4. Validate Artefacts — 14 Rules
 
-**Steps 2 and 5 of the design process.**
+**Quality gate before handover.** Optional — choose automated, conversational, or both.
 
 ```
-"Generate RAML for the EAPI of INT004.4"
-"Create RAML specs for all three layers of INT006"
+"Run validation on the current spec and stories files."
 ```
 
-Generates full RAML 1.0 file set:
-- `api.raml` — main spec with traits and endpoints
-- `dataTypes/` — typed request/response objects
-- `examples/` — named example files
-- `traits/correlatable.raml` — MSC-Conversation-ID trait
-- `CHANGELOG.raml` — mandatory release notes
+```
+"Run validation — structural rules only. I'll deal with content quality separately."
+```
 
-Follows MSC RAML Design Guidelines and references MSC Exchange libraries.
+What happens:
+1. Reads all files in `output/specs/` and `output/stories/`
+2. Runs structural rules 9–14 first (template compliance — hard BLOCKERs)
+3. Runs content quality rules 1–8 after (traceability and completeness)
+4. Saves `output/validation/validation-report.md`
+5. Reports BLOCKER / WARNING / INFO counts by category
+
+**Structural rules (9–14):**
+
+| Rule | What it checks |
+|---|---|
+| 9 | All 11 spec sections present; table columns correct; no inline CSS |
+| 10 | SA-owned sections present and unmodified |
+| 11 | All 7 BA sections have substantive content |
+| 12 | CR: required sections, summary ≤10 words, BDD ≥2 scenarios |
+| 13 | US: required sections, summary ≤12 words, INT### format, BDD ≥3 scenarios |
+| 14 | No empty critical fields; no vague BDD language |
+
+**Content quality rules (1–8):**
+
+| Rule | What it checks |
+|---|---|
+| 1 | Any `[TO BE CONFIRMED]` still present |
+| 2 | BDD criteria missing Given/When/Then or measurable outcome |
+| 3 | Blank documentation / reference fields |
+| 4 | ADF-prefixed interface found in any story |
+| 5 | Wrong CR/US split (new interface given CR, or change given US) |
+| 6 | Users field blank or Change Scope missing owning system |
+| 7 | Use case IDs in spec with no matching test scenario |
+| 8 | Business requirements with no traceable story |
 
 ---
 
-## 6. Generate HLA Page
+## 5. Amend Artefacts Interactively
 
-**Step 3 of the design process.**
+**Walk through every flag. Apply, edit, or skip — file-by-file.**
 
 ```
-"Create the HLA page for INT004.4. EAPI: [id], PAPI: [id], SAPI: [id]"
-"Update the HLA with the sequence diagram for INT006"
+/ba-amend
 ```
 
-Generates:
-- Scope description
-- Key information table (links to all pages)
-- Architecture diagram placeholder
-- PlantUML sequence diagram (consumer → EAPI → PAPI → SAPI → downstream)
-- Alerts and monitoring specifications
-- Internal APIs table
+```
+"Fix FLAG-003 from the validation report. Apply the suggested fix."
+```
+
+```
+"For FLAG-007, the correct value is: INT710v2 Booking Enrichment API. Apply that edit."
+```
+
+```
+"Accept all INFO-level fixes without confirming each one."
+```
+
+What happens:
+1. Reads the validation report
+2. Walks through flags in order: structural BLOCKERs first, then content BLOCKERs, then WARNINGs, then INFOs
+3. For each flag: shows the issue and suggested fix; you choose Accept / Edit / Skip
+4. Applies fixes directly to the relevant spec or story file
+5. Reports Amendment Summary: structural fixes, content fixes, applied / edited / skipped counts
 
 ---
 
-## 7. Create Jira Subtasks
+## 6. Publish to Jira
 
-**Step 6 of the design process.**
+**Update existing tickets with formatted descriptions and acceptance criteria.**
 
 ```
-"Create Jira subtasks for INT004.4 under DTTP-1234"
-"Generate implementation tickets from the INT006 design"
+"Publish the stories to Jira ticket DTTP25-1234."
 ```
 
-Creates one subtask per deliverable:
-- EAPI implementation (with acceptance criteria from design)
-- PAPI implementation (with orchestration steps)
-- SAPI per downstream system (with field mappings and error codes)
-- RAML specs task
-- HLA update task
+```
+"Publish to DTTP25-1234, DTTP25-1235, and DTTP25-1236."
+```
+
+```
+"Show me a preview of the Jira description for DTTP25-1234 before updating."
+```
+
+What happens:
+1. Fetches current ticket via Jira REST API
+2. Reads the matching story `.md` file from `output/stories/`
+3. Shows preview of description and acceptance criteria
+4. Asks for explicit confirmation before writing
+5. Re-fetches ticket to verify the update
+6. Reports the ticket URL
+
+**Important:** The agent never creates or deletes tickets, and never transitions status.
 
 ---
 
-## 8. Answer Design Questions
+## 7. Publish to Confluence
 
-**Instant answers.** No Confluence browsing needed.
+**Update BA sections of an existing spec page, always saving as draft.**
 
 ```
-"What is couponCode? What type is it and where should it appear?"
-"Can EAPI expose downstream error causes?"
-"What's the correct format for MSC-Country-Code?"
-"Which source.name should I use for Datatrans errors?"
-"What's the difference between PAPI and SAPI?"
-"Should this field be in SAPI if it's passed through to Datatrans?"
-"What ISO format should I use for dates?"
+"Publish the spec to: https://msccruises.atlassian.net/wiki/spaces/DTTP/pages/[id]/[title]"
 ```
 
-Claude reads the IA page for field-specific questions. For convention questions, cites the relevant design standard document.
+What happens:
+1. Fetches the current page including body HTML
+2. Extracts and preserves SA-owned sections verbatim
+3. Replaces BA-owned sections with content from the spec file
+4. Adds a new Document History row (version-bumped, current date, sections updated)
+5. Shows a full preview and asks for explicit confirmation
+6. Always saves as **Draft** — a human must publish manually
+7. Reports the page URL and Document History entry created
 
 ---
 
-## 9. Review Design Quality
+## 8. Answer BA Context Questions
+
+**Instant answers about MSC conventions, rules, and patterns.**
 
 ```
-"Review this PAPI page against MSC design standards"
-"Does this EAPI follow conventions?"
-"Check the error structure in this page"
+"What's the ADF exclusion rule and which interface prefixes does it apply to?"
 ```
 
-Checks against all 13 MSC design standard documents:
-- Naming conventions (`dtt-{consumer}-{domain}-{layer}`)
-- Header correctness
-- Data type standards (ISO formats, E.164 phones, etc.)
-- Error response structure (MSC format, source.layer, source.name)
-- Layer-specific rules (EAPI no causes, SAPI single system, etc.)
+```
+"What's the difference between a CR and a User Story in this context?"
+```
+
+```
+"Walk me through why each interface was given a CR versus a US in the last stories run."
+```
+
+```
+"Can I skip validation and go straight to publishing?"
+```
+
+```
+"What's the correct format for Business Requirements in the spec?"
+```
 
 ---
 
-## 10. Design Status Dashboard
+## 9. Track and Report Metrics
+
+**Per-feature timing, token usage, and quality trends.**
 
 ```
-"/status INT004.4"
-"What's done on INT006?"
-"Which design steps are complete for the specialty restaurants interface?"
+/ba-metrics
 ```
 
-Shows progress against the 6-step MSC design process:
-- Step 1: MUL page (with field coverage %)
-- Step 2: EAPI RAML
-- Step 3: HLA page
-- Step 4: EAPI/PAPI/SAPI pages
-- Step 5: PAPI/SAPI RAML
-- Step 6: Jira subtasks
+```
+/ba-metrics --week
+```
+
+```
+/ba-metrics --detail free_balcony_upgrade
+```
+
+```
+/ba-metrics --trend
+```
+
+```
+/ba-metrics-report
+```
+
+What `/ba-metrics` tracks per feature:
+- Intake phase used (yes/no)
+- Validation mode chosen
+- Template auto-fix counts (how many pre-save retries were triggered)
+- Per-phase timing and iteration counts
+- Structural vs content violation counts per validation run
+- Structural vs content fix counts per amend run
+- Feedback loop count (amend + re-validate cycles)
+- Token usage and estimated USD cost
+
+Weekly summary report auto-generated every **Friday at 5pm GMT+1** to `output/metrics/weekly_reports/`.
 
 ---
 
-## What It Does NOT Do
+## What the Agent Does NOT Do
 
-- **Write to production without explicit confirmation** — always drafts to sandbox first
-- **Guess field names** — always reads IA before generating or answering
-- **Add headers not in the IA** — strict blocked-header list enforced automatically
-- **Mix downstream systems in SAPI** — one system per SAPI, always
-- **Simplify requiredness text** — copies exact conditional strings from IA
-- **Skip fields** — row count check before every publish
+- **Invent content** — missing information is always marked `[TO BE CONFIRMED]`, never guessed
+- **Create Jira tickets** — only updates existing ones (description and ACs only)
+- **Create or delete Confluence pages** — only updates BA sections of an existing page
+- **Overwrite SA-owned spec sections** — Solution Overview, Involved Interfaces, Sequence Diagrams, and Monitoring are protected
+- **Generate stories for ADF interfaces** — ADF-prefixed interfaces are always excluded
+- **Publish to production Confluence without confirmation** — always requires explicit approval; always saves as draft
