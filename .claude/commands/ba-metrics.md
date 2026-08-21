@@ -5,8 +5,11 @@ Display a metrics summary for all tracked BA workflow artifacts stored in `outpu
 ## How to invoke
 
 ```
-/ba-metrics                    — summary table for all features
+/ba-metrics                    — summary table for all features (all time)
+/ba-metrics --week             — this week's features only (Mon–today)
 /ba-metrics --detail [slug]    — per-phase breakdown for one feature
+/ba-metrics --csv              — export all metrics as CSV
+/ba-metrics --trend            — show improvement trends over time
 ```
 
 ---
@@ -146,3 +149,116 @@ Run 1: [applied] applied, [edited] edited, [skipped] skipped — completed [comp
 ```
 
 If any field is `null`, display `—`.
+
+---
+
+## --week flag
+
+Filter to features where `timestamp_created` or `session_start` falls in the current ISO week (Monday–Sunday). Display the same summary table but labelled "This week's features". If no features this week: "No features processed this week."
+
+---
+
+## --csv flag
+
+Export all metrics as a CSV file. Run:
+
+```bash
+python3 -c "
+import json, glob, csv, sys
+from io import StringIO
+
+files = sorted(glob.glob('output/metrics/*.json'))
+if not files:
+    print('NO_FILES')
+    sys.exit(0)
+
+output = StringIO()
+writer = csv.writer(output)
+writer.writerow([
+    'feature_slug', 'feature_name', 'status', 'session_start', 'session_end',
+    'total_duration_minutes', 'feedback_loops',
+    'spec_iterations', 'spec_auto_fixes', 'spec_manual_fixes',
+    'stories_input_source', 'cr_count', 'us_count', 'stories_auto_fixed', 'stories_manual_fixed',
+    'validation_mode', 'intake_enabled',
+    'tokens_total', 'estimated_cost_usd'
+])
+for f in files:
+    with open(f) as fh:
+        m = json.load(fh)
+    ph = m.get('phases', {})
+    spec = ph.get('spec', {})
+    stories = ph.get('stories', {})
+    intake = m.get('intake_phase', {})
+    writer.writerow([
+        m.get('feature_slug',''), m.get('feature_name',''), m.get('status',''),
+        m.get('session_start',''), m.get('session_end',''),
+        m.get('total_duration_minutes',''), m.get('feedback_loops',0),
+        spec.get('iterations',0), spec.get('template_auto_fixes',0), spec.get('template_manual_fixes',0),
+        stories.get('input_source','spec'), stories.get('cr_count',''), stories.get('us_count',''),
+        stories.get('stories_auto_fixed',0), stories.get('stories_manual_fixed',0),
+        m.get('validation_mode',''), intake.get('enabled', False),
+        m.get('tokens',{}).get('total',''), m.get('estimated_cost_usd','')
+    ])
+print(output.getvalue())
+"
+```
+
+Save the output to `output/metrics/metrics_export.csv` and tell the user the file path.
+
+---
+
+## --trend flag
+
+Show improvement trends across all features. Run:
+
+```bash
+python3 -c "
+import json, glob
+files = sorted(glob.glob('output/metrics/*.json'))
+features = []
+for f in files:
+    with open(f) as fh:
+        m = json.load(fh)
+    features.append(m)
+
+if len(features) < 2:
+    print('Not enough data for trend analysis. Need at least 2 completed features.')
+else:
+    # Sort by session_start
+    features.sort(key=lambda m: m.get('session_start','') or '')
+    loops = [m.get('feedback_loops',0) for m in features]
+    slugs = [m.get('feature_slug','?') for m in features]
+
+    # Structural fix ratio
+    struct_ratios = []
+    for m in features:
+        ph = m.get('phases',{})
+        amend_runs = ph.get('amend',{}).get('runs',[])
+        struct = sum(r.get('structural_fixes',0) or 0 for r in amend_runs)
+        content = sum(r.get('content_fixes',0) or 0 for r in amend_runs)
+        total = struct + content
+        struct_ratios.append(round(struct/total*100) if total > 0 else None)
+
+    print(json.dumps({'slugs': slugs, 'loops': loops, 'struct_ratios': struct_ratios}, indent=2))
+"
+```
+
+Present results as:
+
+```
+## BA Metrics Trends
+
+Features (oldest → newest): [slug1], [slug2], [slug3] ...
+
+Feedback loops per feature:
+  [slug1]: [n] | [slug2]: [n] | [slug3]: [n]
+  Trend: ↑ increasing / ↓ decreasing / → stable
+
+Structural fix ratio (% of amend fixes that were structural):
+  [slug1]: [n]% | [slug2]: [n]% | [slug3]: [n]%
+  Target: <10%
+  Trend: ↓ improving / ↑ worsening
+
+Recommendation:
+  [1–2 lines based on the data, e.g. "Feedback loops are decreasing — template validation is working."]
+```

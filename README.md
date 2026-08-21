@@ -1,6 +1,6 @@
 # MSC Mule BA Agent — User Guide
 
-An AI-assisted toolkit for Business Analysts on the MSC Cruises MuleSoft Integration team (DTTP programme). It takes raw input materials — emails, meeting notes, Confluence pages, Jira tickets, or pasted text — and walks you through the full BA pipeline: generating a functional specification, producing Jira-ready BA stories, validating quality, amending issues, and publishing to Jira and Confluence.
+An AI-assisted toolkit for Business Analysts on the MSC Cruises MuleSoft Integration team (DTTP programme). It takes raw input materials — emails, meeting notes, Confluence pages, PDFs, meeting recordings, or pasted text — and walks you through the full BA pipeline: preprocessing inputs, generating a functional specification, producing Jira-ready BA stories, validating quality, amending issues, and publishing to Jira and Confluence.
 
 The agent never invents content. Any information it cannot find in your input materials is marked `[TO BE CONFIRMED]` for you to fill in.
 
@@ -14,17 +14,20 @@ The agent never invents content. Any information it cannot find in your input ma
 - [What to provide as input materials](#what-to-provide-as-input-materials)
 - [Pipeline overview](#pipeline-overview)
 - [Workflow phases in detail](#workflow-phases-in-detail)
+  - [Phase 0 — Intake preprocessing (optional)](#phase-0--intake-preprocessing-optional)
   - [Phase 1 — Functional spec generation](#phase-1--functional-spec-generation)
   - [Phase 2 — BA story generation](#phase-2--ba-story-generation)
-  - [Phase 3 — Validation](#phase-3--validation)
+  - [Phase 3 — Validation (optional)](#phase-3--validation-optional)
   - [Phase 4 — Amendment](#phase-4--amendment)
   - [Phase 5 — Publish to Jira](#phase-5--publish-to-jira)
   - [Phase 6 — Publish to Confluence](#phase-6--publish-to-confluence)
+- [Template validation](#template-validation)
 - [Story templates](#story-templates)
 - [Functional spec — sections and ownership](#functional-spec--sections-and-ownership)
 - [Functional spec — writing standards](#functional-spec--writing-standards)
 - [What gets produced](#what-gets-produced)
 - [Agents and skills](#agents-and-skills)
+- [Metrics tracking](#metrics-tracking)
 - [Output folder structure](#output-folder-structure)
 - [Reference documents](#reference-documents)
 - [Key things to know](#key-things-to-know)
@@ -81,10 +84,12 @@ You will see a menu:
 
 ```
 1. Spec only            — generate a functional spec from input materials
-2. Stories only         — generate Jira BA stories from an existing spec
+2. Stories only         — generate Jira BA stories from a spec or direct input
 3. Full end-to-end      — spec → stories → validate → amend → publish
 4. Validate and publish — validate existing output and publish to Jira / Confluence
 ```
+
+For options 1 and 3, you will also be asked whether to run **intake preprocessing** first — useful when your input materials are PDFs or meeting recordings that need extracting before the spec can be generated.
 
 Choose the option that matches what you need. Claude will guide you through each step interactively.
 
@@ -98,6 +103,8 @@ When prompted for input materials, you can provide any combination of:
 
 - **Pasted text** — copy and paste an email, Teams message, meeting notes, or requirements description directly into the chat
 - **File paths** — e.g. `C:\Users\[your_user]\Documents\requirements.docx`
+- **PDF files** — run `/intake` first to extract content (see [Phase 0](#phase-0--intake-preprocessing-optional))
+- **Meeting recordings** — provide a VTT transcript file + video file; `/intake` will enrich the transcript with screen context
 - **Confluence page URLs** — e.g. `https://msccruises.atlassian.net/wiki/spaces/...` — the agent fetches the page live via the MCP server
 - **Jira ticket URLs** — e.g. `https://smartship.atlassian.net/browse/MDTTPU-1234`
 - **Sequence diagrams** — paste PlantUML directly into the chat
@@ -112,28 +119,34 @@ The more detail you provide, the fewer `[TO BE CONFIRMED]` gaps will appear in t
 ```
 Input materials
       │
-      ▼
+      ▼  (optional)
 ┌─────────────────────────────┐
-│  functional-spec-generator   │  → output/specs/functional_spec_[name].html
-│  (agent)                     │    Sections: Document History, Reference Docs,
-│                              │    Feature Summary, Business Requirements,
-│                              │    Use Cases, NFRs, Test Scenarios & ACs
+│  /intake                     │  → output/intake/*.md
+│  intake-preprocessor (agent) │    Extracts PDFs, enriches meeting recordings,
+│                              │    fetches Confluence pages, structures text
 └──────────────┬──────────────┘
                │
                ▼
 ┌─────────────────────────────┐
-│  ba-story-generator          │  → output/stories/[name].html
-│  (agent)                     │    Generates Change Requests and User Stories
-│                              │    Applies ADF exclusion and splitting rules
+│  functional-spec-generator   │  → output/specs/functional_spec_[name].html
+│  (agent)                     │    Reads template, validates structure pre-save
+│                              │    11 sections: BA-owned (7) + SA-owned (4)
 └──────────────┬──────────────┘
-               │
+               │  (choose: conversational review / automated validation / both)
+               ▼
+┌─────────────────────────────┐
+│  ba-story-generator          │  → output/stories/[initiative]_cr_001.md etc.
+│  (agent)                     │    Input: spec file OR direct requirements
+│                              │    Validates each story pre-save; auto-retries
+└──────────────┬──────────────┘
+               │  (optional)
                ▼
 ┌─────────────────────────────┐
 │  ba-validator                │  → output/validation/validation-report.md
-│  (agent)                     │    Flags: TBC fields, vague ACs, missing links,
-│                              │    ADF slippage, wrong splits, missing owners
+│  (agent)                     │    Rules 9–14: structural (BLOCKERs first)
+│                              │    Rules 1–8:  content quality (after structure)
 └──────────────┬──────────────┘
-               │
+               │  (if blockers found)
                ▼
 ┌─────────────────────────────┐
 │  /ba-amend                   │    Interactive: Accept fix / Edit manually / Skip
@@ -155,9 +168,33 @@ Input materials
 └─────────────┘
 ```
 
+> **Architecture diagram:** See [`docs/architecture-diagram.html`](docs/architecture-diagram.html) for a full visual map of how all agents, skills, validators, and output folders connect.
+
 ---
 
 ## Workflow phases in detail
+
+### Phase 0 — Intake preprocessing (optional)
+
+**Command:** `/intake` (standalone) or prompted by `ba-workflow`
+**Agent:** `intake-preprocessor`
+
+Cleans and structures raw input materials before BA processing. Run this when your inputs are PDFs, meeting recordings, or other unstructured formats.
+
+**What it supports:**
+
+| Input type | How it is processed |
+|---|---|
+| PDF files | Extracted via classical text parsing + AI vision (distill-doc skill); merged output |
+| Meeting recordings | VTT transcript enriched with screen frame descriptions (enrich-meeting skill) |
+| Confluence pages | Fetched live and stripped to substantive content |
+| Pasted text | Written directly to a structured markdown file |
+
+**Output:** Structured `.md` files in `output/intake/` and a summary at `output/intake/intake_summary.md`.
+
+You can run `/intake` at any time — it does not require the workflow to be running. Pass the output files as input materials to the spec generator.
+
+---
 
 ### Phase 1 — Functional spec generation
 
@@ -170,14 +207,21 @@ The spec covers:
 - The **API layer specifically** in the NFRs and Test Scenarios — written for the API(s) the MuleSoft team will build or change
 
 **What the agent does:**
-1. Reads all input materials (pasted text, files, Confluence pages, URLs)
-2. Identifies the overall solution and the specific MuleSoft API(s) involved
-3. Fills in all spec sections using the source materials
-4. Marks gaps as `[TO BE CONFIRMED]` rather than inventing content
-5. Saves the spec to `output/specs/functional_spec_[feature_name].html`
-6. Reports the file path and all TO BE CONFIRMED fields found
+1. Reads the spec template (`knowledge/templates/functional_specification_template.html`) before generating any content
+2. Reads all input materials (pasted text, files, Confluence pages, URLs, or `output/intake/` files from the intake phase)
+3. Identifies the overall solution and the specific MuleSoft API(s) involved
+4. Fills in all 7 BA-owned sections; preserves all 4 SA-owned sections unchanged
+5. Marks gaps as `[TO BE CONFIRMED]` rather than inventing content
+6. Runs `spec_validator.py` before saving — auto-fixes structural issues; retries once on failure
+7. Saves the spec to `output/specs/functional_spec_[feature_name].html`
+8. Reports the file path, all TO BE CONFIRMED fields, and template validation result
 
 For Test Scenarios, every Use Case must have at least one happy path test, one alternative path test, and one error scenario. Missing categories are flagged as gaps — never silently omitted.
+
+After spec generation, you choose how to review before proceeding to stories:
+- **Conversational** — ask the agent to fix any issues in chat
+- **Automated** — run `ba-validator` with structural Rules 9–11
+- **Both** — conversational first, then automated as a final check
 
 ---
 
@@ -185,7 +229,22 @@ For Test Scenarios, every Use Case must have at least one happy path test, one a
 
 **Agent:** `ba-story-generator`
 
-Reads the functional spec and generates Jira-ready BA stories (Change Requests and User Stories).
+Generates Jira-ready BA stories (Change Requests and User Stories). Supports two input modes:
+
+| Input mode | When to use |
+|---|---|
+| **From spec** | Read the functional spec from `output/specs/` and derive all stories from it |
+| **Direct input** | Provide a list of interfaces and requirements directly — no spec needed |
+
+**What the agent does:**
+1. Reads both story templates (`change_request_template.html`, `user_story_template.html`) before generating
+2. Applies the ADF exclusion rule and splitting logic (see below)
+3. Generates each story following the template exactly
+4. Runs `story_validator.py` on each story before saving — auto-retries once on failure
+5. Saves each story as a separate Markdown file to `output/stories/`
+6. Reports template compliance per story
+
+**Output filenames:** `output/stories/[initiative]_cr_001.md`, `[initiative]_us_001.md`, etc. (one file per story)
 
 **ADF exclusion rule (applied first):**
 Any interface prefixed with `ADF` (e.g. ADF108, ADF204) is completely ignored. These interfaces are owned by another team and must never produce a story. They are treated as background reference only.
@@ -199,21 +258,30 @@ Any interface prefixed with `ADF` (e.g. ADF108, ADF204) is completely ignored. T
 | Multiple changes under the same logical feature for one interface | One **CR** |
 | Different logical features or different change types | Separate **CRs** |
 
-The agent reports:
-- How many CRs and User Stories were generated
-- Any ADF interfaces excluded and why
-- Any fields left blank due to missing spec content
-- The full path to the saved stories file
+After story generation, the same review options are available as after the spec: conversational, automated, or both.
 
 ---
 
-### Phase 3 — Validation
+### Phase 3 — Validation (optional)
 
 **Agent:** `ba-validator`
 
-Reads all files in `output/specs/` and `output/stories/` and produces a structured validation report with flags at three severity levels.
+Reads all files in `output/specs/` and `output/stories/` and produces a structured validation report. Validation is **optional** — you can also review output conversationally with the agent instead of running the automated validator.
 
-**Validation rules:**
+Rules run in two groups: **structural rules first** (Rules 9–14, BLOCKERs), then **content quality rules** (Rules 1–8).
+
+**Structural rules (NEW — run first):**
+
+| Rule | Severity | Description |
+|---|---|---|
+| Rule 9 — Spec template structure | BLOCKER | All 11 section headings present; tables have correct columns; no inline styles |
+| Rule 10 — Protected section preservation | BLOCKER | SA-owned sections (Solution Overview, Involved Interfaces, Sequence Diagrams, Monitoring) still present and unmodified |
+| Rule 11 — Required BA field population | BLOCKER / WARNING | All 7 BA-owned sections have substantive content, not just placeholders |
+| Rule 12 — CR template compliance | BLOCKER | All required CR sections present; summary ≤10 words; BDD format with ≥2 scenarios |
+| Rule 13 — User Story template compliance | BLOCKER | All required US sections present; summary ≤12 words; INT### format; BDD format with ≥3 scenarios |
+| Rule 14 — Story structure consistency | BLOCKER / WARNING | No empty critical fields; no vague language in BDD criteria |
+
+**Content quality rules (existing):**
 
 | Rule | Severity | Description |
 |---|---|---|
@@ -226,7 +294,7 @@ Reads all files in `output/specs/` and `output/stories/` and produces a structur
 | Rule 7 — Use Cases not referenced in test scenarios | WARNING | A Use Case with no corresponding test or acceptance criterion |
 | Rule 8 — Business requirements without a story | INFO | A BR that cannot be traced to any generated story |
 
-The report is saved to `output/validation/validation-report.md` with a summary count and the full list of flags in severity order.
+The report is saved to `output/validation/validation-report.md` with a structural and content breakdown.
 
 ---
 
@@ -302,6 +370,34 @@ Updates an existing Confluence page with the BA-owned sections from a generated 
 All URLs written to the page are rendered as clickable hyperlinks. All Confluence macros (TOC, PlantUML, status macros, whiteboard embeds, etc.) are preserved exactly as they appear on the current page.
 
 The draft URL format is: `https://msccruises.atlassian.net/pages/resumedraft.action?draftId=[page_id]`
+
+---
+
+## Template validation
+
+Template compliance is enforced automatically at two points in the pipeline — before any file is saved.
+
+| When | What runs | What it checks |
+|---|---|---|
+| After spec generation | `knowledge/templates/spec_validator.py` | All 11 sections present, table column headers, user story format, no inline styles |
+| After each story is generated | `knowledge/templates/story_validator.py --type=cr` or `--type=us` | Required sections, summary word count, BDD format, interface name format |
+
+If a validator finds issues, the agent **auto-retries once** — regenerating the offending section with explicit template attention. If still failing after retry, the file is saved with a warning comment and the issue is surfaced in the next validation run.
+
+You can also run the validators manually on any file:
+
+```bash
+# Validate a spec
+python3 knowledge/templates/spec_validator.py output/specs/functional_spec_myfeature.html
+
+# Validate a CR story
+python3 knowledge/templates/story_validator.py --type=cr output/stories/myfeature_cr_001.md
+
+# Validate a User Story
+python3 knowledge/templates/story_validator.py --type=us output/stories/myfeature_us_001.md
+```
+
+Both validators output a JSON list of violations, or the string `OK` if compliant. Exit code `0` = valid, `1` = invalid.
 
 ---
 
@@ -387,9 +483,12 @@ The following conventions are enforced by the agent and should be maintained dur
 
 | Output | Location | Description |
 |--------|----------|-------------|
+| Preprocessed materials | `output/intake/*.md` | Structured markdown extracted from PDFs, meetings, Confluence pages |
 | Functional specification | `output/specs/functional_spec_[name].html` | HTML spec ready for Confluence |
-| BA stories | `output/stories/[name].html` | Change Requests and User Stories ready for Jira |
-| Validation report | `output/validation/validation-report.md` | Flags issues before publishing |
+| BA stories | `output/stories/[initiative]_cr_001.md` etc. | Change Requests and User Stories as Markdown — one file per story |
+| Validation report | `output/validation/validation-report.md` | Structural + content flags before publishing |
+| Metrics | `output/metrics/metrics_[slug].json` | Per-feature timing, token usage, iteration counts |
+| Weekly report | `output/metrics/weekly_reports/ba_metrics_[date].md` | Auto-generated Friday summary |
 
 ---
 
@@ -397,13 +496,34 @@ The following conventions are enforced by the agent and should be maintained dur
 
 | File | Type | What it does | Invoked by |
 |------|------|---|------------|
-| `agents/functional-spec-generator.md` | Agent | Generates the HTML functional spec from raw input materials | `ba-workflow`, or directly |
-| `agents/ba-story-generator.md` | Agent | Generates CRs and User Stories from the spec; applies ADF exclusion and splitting rules | `ba-workflow`, or directly |
-| `agents/ba-validator.md` | Agent | Validates spec and stories output; produces a flag report with BLOCKERs, WARNINGs, and INFOs | `ba-workflow`, or directly |
+| `agents/intake-preprocessor.md` | Agent | Extracts PDFs (distill-doc), enriches meeting recordings (enrich-meeting), fetches Confluence pages | `/intake`, or via `ba-workflow` |
+| `agents/functional-spec-generator.md` | Agent | Generates the HTML functional spec; reads template; validates structure before saving | `ba-workflow`, or directly |
+| `agents/ba-story-generator.md` | Agent | Generates CRs and User Stories (from spec or direct input); validates each story before saving | `ba-workflow`, or directly |
+| `agents/ba-validator.md` | Agent | Validates spec and stories — structural rules 9–14 first, then content rules 1–8 | `ba-workflow`, or directly |
 | `agents/jira-publisher.md` | Agent | Updates description and acceptance criteria on existing Jira tickets | `ba-workflow`, or directly |
 | `agents/confluence-publisher.md` | Agent | Updates BA sections on a Confluence page; always saves as draft | `ba-workflow`, or directly |
 | `.claude/commands/ba-amend.md` | Skill | Interactive amendment tool — walks through validation flags one by one | `/ba-amend`, or via `ba-workflow` |
 | `.claude/commands/ba-workflow.md` | Skill | Main orchestrator — presents the workflow menu and chains agents in order | `/ba-workflow` |
+| `.claude/commands/intake.md` | Skill | Standalone intake preprocessing — PDFs, meetings, Confluence, text | `/intake` |
+| `.claude/commands/ba-metrics.md` | Skill | Displays metrics summary with `--week`, `--detail`, `--csv`, `--trend` options | `/ba-metrics` |
+| `.claude/commands/ba-metrics-report.md` | Skill | Generates weekly metrics report; also runs automatically every Friday at 5pm | `/ba-metrics-report` |
+
+---
+
+## Metrics tracking
+
+Every workflow run writes a metrics JSON file to `output/metrics/`. Use the `/ba-metrics` command to view and export them.
+
+```
+/ba-metrics                    — summary table for all features
+/ba-metrics --week             — this week's features only
+/ba-metrics --detail [slug]    — full per-phase breakdown for one feature
+/ba-metrics --csv              — export all metrics as CSV
+/ba-metrics --trend            — show improvement trends over time
+/ba-metrics-report             — generate the full weekly report on demand
+```
+
+A **weekly report** is generated automatically every **Friday at 5pm** (scheduled task) and saved to `output/metrics/weekly_reports/`. It covers iteration counts, template compliance rates, structural vs content fix ratios, and recommendations.
 
 ---
 
@@ -411,14 +531,24 @@ The following conventions are enforced by the agent and should be maintained dur
 
 ```
 output/
+├── intake/
+│   ├── [source]_intake.md          ← preprocessed input materials
+│   └── intake_summary.md           ← extraction summary
+│
 ├── specs/
-│   └── functional_spec_[feature_name].html   ← generated functional specification
+│   └── functional_spec_[name].html ← generated functional specification
 │
 ├── stories/
-│   └── [feature_name].html                   ← Jira-ready CRs and User Stories
+│   ├── [initiative]_cr_001.md      ← Change Request (one file per story)
+│   └── [initiative]_us_001.md      ← User Story (one file per story)
 │
-└── validation/
-    └── validation-report.md                  ← flags, severities, and suggested fixes
+├── validation/
+│   └── validation-report.md        ← structural + content flags
+│
+└── metrics/
+    ├── metrics_[slug].json          ← per-feature metrics record
+    └── weekly_reports/
+        └── ba_metrics_[date].md    ← weekly summary report
 ```
 
 ---
@@ -437,8 +567,12 @@ output/
 ## Key things to know
 
 - **Missing information is never invented** — gaps are always marked `[TO BE CONFIRMED]` for you to fill in
+- **Templates are read and enforced automatically** — agents read the HTML templates before generating output and validate structure before saving; structural issues are auto-retried once before surfacing a warning
+- **Validation is optional** — you can review output conversationally with the agent instead of running automated validation; the workflow supports conversational, automated, or hybrid review at each phase
+- **Stories are now Markdown files** (`.md`), one per story — easier to diff, edit, and convert for Jira
 - **ADF interfaces are excluded from story generation** (e.g. ADF108) — this is by design; they are owned by another team
 - **New interfaces always become User Stories** — existing interface changes always become CRs
+- **Stories can be generated without a spec** — use the "direct input" option in ba-story-generator when you don't have a spec file
 - **Confluence pages are always saved as drafts** — a human must review and publish manually
 - **SA-owned sections are never touched** — Solution Overview, Involved Interfaces, Sequence Diagrams, and Monitoring & Alerting Guidelines are preserved exactly as the Solution Architect left them
 - **All Confluence macros are preserved** — TOC, PlantUML, whiteboard embeds, and any other `ac:` macros are copied verbatim from the current page

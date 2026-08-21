@@ -44,13 +44,92 @@ Always distinguish between what the MuleSoft team owns (the API contract and imp
 
 ## Workflow
 
-1. Read all provided input materials (files, pasted text, URLs via WebFetch, Confluence pages via MCP tool if available). **Do NOT read files from `output/specs/`, `output/stories/`, or `output/validation/` unless the caller has explicitly named one of those files as an input. Those directories contain previous outputs for other features and must not be used to infer format or content.**
-2. Identify: the overall solution being delivered, and the specific API(s) the MuleSoft team must build or change to support it.
-3. Extract: feature name, actors, business rules, solution use cases, API names/operations, and any known gaps.
-3. Derive a `feature_name` slug (lowercase, underscores, no spaces) from the feature title.
-4. Run `mkdir -p "C:/Users/[your_user]/MSC- Mule BA Agent/output/specs"` to ensure the output directory exists.
-5. Write the completed spec to `C:/Users/[your_user]/MSC- Mule BA Agent/output/specs/functional_spec_[feature_name].html`.
-6. Report the saved file path and a brief list of any fields marked TO BE CONFIRMED.
+### Step 0 — Read the spec template
+
+Before generating any content, read the spec template:
+
+```
+Read file: knowledge/templates/functional_specification_template.html
+```
+
+This file defines the 11 required sections and their table structures. Your output must follow this template exactly.
+
+**Section ownership — commit this to context before writing:**
+
+| Section | Owner | Your obligation |
+|---|---|---|
+| Document History | BA | Must generate |
+| Reference Documentation | BA | Must generate or mark [TO BE CONFIRMED] |
+| Feature Summary | BA | Must generate |
+| Business Requirements | BA | Must generate |
+| Use Cases | BA | Must generate |
+| Solution Overview | SA | Preserve as-is — never overwrite |
+| Involved Interfaces | SA | Preserve as-is — never overwrite |
+| Sequence Diagrams | SA | Preserve as-is — never overwrite |
+| Non-Functional Requirements | BA | Must generate |
+| Monitoring and Alerting Guidelines | SA | Preserve as-is — never overwrite |
+| Test Scenarios & Acceptance Criteria | BA | Must generate |
+
+You MUST generate all 7 BA-owned sections or mark them `[TO BE CONFIRMED]`. The 4 SA-owned sections must appear in the output with their placeholder text unchanged.
+
+### Step 1 — Read input materials
+
+Read all provided input materials (files, pasted text, URLs via WebFetch, Confluence pages via MCP tool if available). **Do NOT read files from `output/specs/`, `output/stories/`, or `output/validation/` unless the caller has explicitly named one of those files as an input. Those directories contain previous outputs for other features and must not be used to infer format or content.**
+
+### Step 2 — Analyse and extract
+
+Identify: the overall solution being delivered, and the specific API(s) the MuleSoft team must build or change to support it.
+
+Extract: feature name, actors, business rules, solution use cases, API names/operations, and any known gaps.
+
+Derive a `feature_name` slug (lowercase, underscores, no spaces) from the feature title.
+
+### Step 3 — Ensure output directory
+
+```bash
+mkdir -p output/specs
+```
+
+### Step 4 — Generate the spec
+
+Write the completed spec to `output/specs/functional_spec_[feature_name].html`, following the template read in Step 0 section by section. Do not skip sections. Fill every field from the source materials; mark missing content `[TO BE CONFIRMED]`.
+
+### Step 5 — Pre-save template validation
+
+Before saving the file, run:
+
+```bash
+python3 knowledge/templates/spec_validator.py "output/specs/functional_spec_[feature_name].html"
+```
+
+**If the validator returns `OK`:** Save the file and proceed to Step 6.
+
+**If the validator returns violations:**
+
+1. Report the violations to the user:
+   > "Template validation found [n] issue(s) before saving. Auto-fixing..."
+2. Automatically regenerate any section flagged as a violation, paying explicit attention to the template structure for that section.
+3. Re-run the validator on the fixed content.
+4. If still failing after one auto-retry, save the file with a warning:
+   > "⚠ Saved with [n] unresolved template issue(s). These will be caught by ba-validator (Rules 9–11) if you run automated validation."
+
+Track fixes for metrics:
+- Each section regenerated automatically → `template_auto_fixes + 1`
+- Any issue saved with warning (not auto-fixed) → `template_manual_fixes + 1`
+
+### Step 6 — Report to the user
+
+Tell the user:
+- The full path to the saved file
+- A brief list of any fields marked TO BE CONFIRMED
+- Template validation result:
+
+```
+Template Validation: ✓ All 7 BA sections generated, structure compliant
+  — OR —
+Template Validation: ⚠ [n] issue(s) auto-fixed | [n] issue(s) require manual review
+TBC Fields: [n] found
+```
 
 ## Output format
 

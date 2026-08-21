@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MSC BA Agent — Architecture Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 32px 24px 48px;
+    min-width: 1100px;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 4px;
+    letter-spacing: 0.01em;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 32px;
+  }
+
+  /* ── LAYERS ── */
+  .layer {
+    position: relative;
+    margin-bottom: 0;
+  }
+  .layer-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 10px;
+  }
+
+  /* ── ENTRY POINTS ── */
+  .entry-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .entry-chip {
+    background: #f1f5f9;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .entry-chip.primary {
+    border-color: #6366f1;
+    color: #4338ca;
+    background: #eef2ff;
+  }
+  .entry-chip.metrics {
+    border-color: #0891b2;
+    color: #0e7490;
+    background: #ecfeff;
+  }
+  .entry-chip.scheduled {
+    border-color: #d97706;
+    color: #b45309;
+    background: #fffbeb;
+  }
+
+  /* ── CONNECTOR ARROWS ── */
+  .arrow-down {
+    display: flex;
+    justify-content: flex-start;
+    padding-left: 48px;
+    margin: 6px 0;
+  }
+  .arrow-down svg { display: block; }
+
+  /* ── PHASES STRIP ── */
+  .phases-strip {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  .phase-block {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+  }
+
+  /* arrow connector between phases */
+  .phase-connector {
+    display: flex;
+    align-items: center;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .phase-connector svg { display: block; }
+
+  .phase-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 12px 10px;
+    height: 100%;
+  }
+  .phase-card.optional {
+    border-style: dashed;
+    border-color: #cbd5e1;
+  }
+  .phase-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 6px;
+  }
+  .phase-optional-badge {
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── AGENT BOX ── */
+  .agent-box {
+    background: #eff6ff;
+    border: 1.5px solid #93c5fd;
+    border-radius: 7px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .agent-box .agent-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1d4ed8;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .agent-box .agent-type {
+    font-size: 9px;
+    color: #3b82f6;
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  .skill-box {
+    background: #faf5ff;
+    border: 1.5px solid #c4b5fd;
+    border-radius: 7px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+  .skill-box .agent-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6d28d9;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .skill-box .agent-type {
+    font-size: 9px;
+    color: #8b5cf6;
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  /* ── READS / RUNS / WRITES chips ── */
+  .detail-list {
+    list-style: none;
+    margin-top: 4px;
+  }
+  .detail-list li {
+    font-size: 9.5px;
+    color: #64748b;
+    padding: 1.5px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    line-height: 1.4;
+  }
+  .tag {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border-radius: 3px;
+    padding: 1px 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .tag-reads  { background: #dbeafe; color: #1d4ed8; }
+  .tag-runs   { background: #dcfce7; color: #15803d; }
+  .tag-writes { background: #fee2e2; color: #b91c1c; }
+  .tag-calls  { background: #f3e8ff; color: #7e22ce; }
+
+  /* ── INTAKE SECTION ── */
+  .intake-section {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 0;
+    align-items: flex-start;
+  }
+  .intake-card {
+    background: #ffffff;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 12px 10px;
+    flex: 0 0 260px;
+  }
+  .intake-skills {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 180px;
+  }
+  .skill-card {
+    background: #faf5ff;
+    border: 1.5px solid #c4b5fd;
+    border-radius: 7px;
+    padding: 7px 10px;
+  }
+  .skill-card .name {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6d28d9;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .skill-card .desc {
+    font-size: 9px;
+    color: #8b5cf6;
+    margin-top: 1px;
+  }
+
+  /* ── SUPPORTING LAYER ── */
+  .support-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .support-group {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    flex: 1;
+    min-width: 200px;
+  }
+  .support-group-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 7px;
+  }
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 3px 7px;
+    font-size: 9.5px;
+    color: #475569;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    margin: 2px 3px 2px 0;
+  }
+  .file-chip.template { border-color: #6ee7b7; color: #065f46; background: #ecfdf5; }
+  .file-chip.validator { border-color: #86efac; color: #166534; background: #f0fdf4; }
+  .file-chip.output { border-color: #fcd34d; color: #92400e; background: #fffbeb; }
+  .file-chip.external { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+
+  /* ── OUTPUT ROW ── */
+  .output-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .output-folder {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: #92400e;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .output-folder svg { flex-shrink: 0; }
+
+  /* ── EXTERNAL SYSTEMS ── */
+  .external-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .external-box {
+    background: #eff6ff;
+    border: 1.5px solid #93c5fd;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mcp-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  /* ── DIVIDERS ── */
+  hr.section-div {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 14px 0;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 14px;
+    border-top: 1px solid #e2e8f0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: #64748b;
+  }
+  .legend-swatch {
+    width: 24px;
+    height: 10px;
+    border-radius: 2px;
+    border-width: 1.5px;
+    border-style: solid;
+    flex-shrink: 0;
+  }
+  .legend-swatch.agent   { border-color: #93c5fd; background: #eff6ff; }
+  .legend-swatch.skill   { border-color: #c4b5fd; background: #faf5ff; }
+  .legend-swatch.skill2  { border-color: #c4b5fd; background: #faf5ff; }
+  .legend-swatch.optional { border-color: #cbd5e1; background: #ffffff; border-style: dashed; }
+  .legend-swatch.output  { border-color: #fcd34d; background: #fffbeb; }
+  .legend-swatch.external { border-color: #93c5fd; background: #eff6ff; }
+
+  /* connector line between sections */
+  .v-connector {
+    display: flex;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>MSC BA Agent — Architecture Diagram</h1>
+<p class="subtitle">Agents, skills, validators, output folders, and external integrations</p>
+
+<!-- ═══════════════════════════════════════════════
+     ENTRY POINTS
+════════════════════════════════════════════════ -->
+<div class="layer">
+  <div class="layer-label">Entry points</div>
+  <div class="entry-row">
+    <div class="entry-chip primary">/ba-workflow</div>
+    <div class="entry-chip">/intake &nbsp;<span style="font-size:10px;color:#475569;font-weight:400">(standalone)</span></div>
+    <div class="entry-chip metrics">/ba-metrics</div>
+    <div class="entry-chip metrics">/ba-metrics-report</div>
+    <div class="entry-chip scheduled">⏰ Friday 5pm GMT+1</div>
+  </div>
+</div>
+
+<hr class="section-div">
+
+<!-- ═══════════════════════════════════════════════
+     INTAKE (OPTIONAL)
+════════════════════════════════════════════════ -->
+<div class="layer">
+  <div class="layer-label">Phase: Intake &nbsp;<span class="phase-optional-badge">optional</span></div>
+  <div class="intake-section">
+
+    <div class="intake-card">
+      <div class="agent-box" style="margin-bottom:0">
+        <div class="agent-name">intake-preprocessor</div>
+        <div class="agent-type">agent</div>
+      </div>
+      <ul class="detail-list" style="margin-top:6px">
+        <li><span class="tag tag-calls">calls</span> distill-doc skill (PDFs)</li>
+        <li><span class="tag tag-calls">calls</span> enrich-meeting skill (VTT+video)</li>
+        <li><span class="tag tag-calls">calls</span> WebFetch (Confluence pages)</li>
+        <li><span class="tag tag-writes">writes</span> output/intake/*.md</li>
+      </ul>
+    </div>
+
+    <!-- arrow right -->
+    <div style="display:flex;align-items:center;padding:0 4px">
+      <svg width="20" height="16" viewBox="0 0 20 16">
+        <line x1="0" y1="8" x2="14" y2="8" stroke="#cbd5e1" stroke-width="1.5"/>
+        <polygon points="14,4 20,8 14,12" fill="#cbd5e1"/>
+      </svg>
+    </div>
+
+    <div class="intake-skills">
+      <div class="skill-card">
+        <div class="name">distill-doc</div>
+        <div class="desc">PDF extraction · AI + classical</div>
+      </div>
+      <div class="skill-card">
+        <div class="name">enrich-meeting</div>
+        <div class="desc">VTT transcript + video frames</div>
+      </div>
+    </div>
+
+    <!-- arrow right -->
+    <div style="display:flex;align-items:center;padding:0 4px">
+      <svg width="20" height="16" viewBox="0 0 20 16">
+        <line x1="0" y1="8" x2="14" y2="8" stroke="#cbd5e1" stroke-width="1.5"/>
+        <polygon points="14,4 20,8 14,12" fill="#cbd5e1"/>
+      </svg>
+    </div>
+
+    <div style="display:flex;align-items:center">
+      <div class="output-folder">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M1 3.5C1 2.67 1.67 2 2.5 2H5L6 3.5H9.5C10.33 3.5 11 4.17 11 5V9C11 9.83 10.33 10.5 9.5 10.5H2.5C1.67 10.5 1 9.83 1 9V3.5Z" stroke="#d97706" stroke-width="1"/>
+        </svg>
+        output/intake/
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="section-div">
+
+<!-- ═══════════════════════════════════════════════
+     MAIN PIPELINE PHASES
+════════════════════════════════════════════════ -->
+<div class="layer">
+  <div class="layer-label">Main pipeline phases</div>
+
+  <div class="phases-strip">
+
+    <!-- SPEC -->
+    <div class="phase-block">
+      <div class="phase-card">
+        <div class="phase-label">Spec</div>
+        <div class="agent-box">
+          <div class="agent-name">functional-spec-generator</div>
+          <div class="agent-type">agent</div>
+        </div>
+        <ul class="detail-list">
+          <li><span class="tag tag-reads">reads</span> functional_specification_template.html</li>
+          <li><span class="tag tag-runs">runs</span> spec_validator.py (pre-save)</li>
+          <li><span class="tag tag-writes">writes</span> output/specs/*.html</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">
+      <svg width="24" height="40" viewBox="0 0 24 40">
+        <line x1="0" y1="20" x2="16" y2="20" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <polygon points="16,16 24,20 16,24" fill="#94a3b8"/>
+      </svg>
+    </div>
+
+    <!-- STORIES -->
+    <div class="phase-block">
+      <div class="phase-card">
+        <div class="phase-label">Stories</div>
+        <div class="agent-box">
+          <div class="agent-name">ba-story-generator</div>
+          <div class="agent-type">agent</div>
+        </div>
+        <ul class="detail-list">
+          <li><span class="tag tag-reads">reads</span> change_request_template.html</li>
+          <li><span class="tag tag-reads">reads</span> user_story_template.html</li>
+          <li><span class="tag tag-runs">runs</span> story_validator.py (per story)</li>
+          <li><span class="tag tag-writes">writes</span> output/stories/*.md</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">
+      <svg width="24" height="40" viewBox="0 0 24 40">
+        <line x1="0" y1="20" x2="16" y2="20" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <polygon points="16,16 24,20 16,24" fill="#94a3b8"/>
+      </svg>
+    </div>
+
+    <!-- VALIDATE -->
+    <div class="phase-block">
+      <div class="phase-card optional">
+        <div class="phase-label">Validate <span class="phase-optional-badge">optional</span></div>
+        <div class="agent-box">
+          <div class="agent-name">ba-validator</div>
+          <div class="agent-type">agent</div>
+        </div>
+        <ul class="detail-list">
+          <li><span class="tag tag-runs">runs</span> spec_validator.py (Rules 9–11)</li>
+          <li><span class="tag tag-runs">runs</span> story_validator.py (Rules 12–14)</li>
+          <li><span class="tag tag-runs">runs</span> content rules 1–8</li>
+          <li><span class="tag tag-writes">writes</span> output/validation/</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">
+      <svg width="24" height="40" viewBox="0 0 24 40">
+        <line x1="0" y1="20" x2="16" y2="20" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <polygon points="16,16 24,20 16,24" fill="#94a3b8"/>
+      </svg>
+    </div>
+
+    <!-- AMEND -->
+    <div class="phase-block">
+      <div class="phase-card optional">
+        <div class="phase-label">Amend <span class="phase-optional-badge">optional</span></div>
+        <div class="skill-box">
+          <div class="agent-name">/ba-amend</div>
+          <div class="agent-type">skill (command)</div>
+        </div>
+        <ul class="detail-list">
+          <li><span class="tag tag-reads">reads</span> validation-report.md</li>
+          <li style="color:#94a3b8">Interactive: Accept / Edit / Skip</li>
+          <li><span class="tag tag-writes">writes</span> output/specs/ + stories/</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="phase-connector">
+      <svg width="24" height="40" viewBox="0 0 24 40">
+        <line x1="0" y1="20" x2="16" y2="20" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <polygon points="16,16 24,20 16,24" fill="#94a3b8"/>
+      </svg>
+    </div>
+
+    <!-- PUBLISH -->
+    <div class="phase-block">
+      <div class="phase-card">
+        <div class="phase-label">Publish</div>
+        <div class="agent-box" style="margin-bottom:6px">
+          <div class="agent-name">jira-publisher</div>
+          <div class="agent-type">agent</div>
+        </div>
+        <div class="agent-box">
+          <div class="agent-name">confluence-publisher</div>
+          <div class="agent-type">agent</div>
+        </div>
+        <ul class="detail-list">
+          <li><span class="tag tag-calls">calls</span> Jira MCP · Confluence MCP</li>
+          <li style="color:#64748b;font-size:9px">Confluence: saves as draft only</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="section-div">
+
+<!-- ═══════════════════════════════════════════════
+     SUPPORTING LAYER — Templates + Validators
+════════════════════════════════════════════════ -->
+<div class="layer">
+  <div class="layer-label">Knowledge &amp; validators</div>
+  <div class="support-row">
+
+    <div class="support-group">
+      <div class="support-group-title">Templates &nbsp;(knowledge/templates/)</div>
+      <span class="file-chip template">functional_specification_template.html</span>
+      <span class="file-chip template">change_request_template.html</span>
+      <span class="file-chip template">user_story_template.html</span>
+    </div>
+
+    <div class="support-group" style="flex:0 0 auto;min-width:260px">
+      <div class="support-group-title">Python validators &nbsp;(knowledge/templates/)</div>
+      <span class="file-chip validator">spec_validator.py</span>
+      <span style="font-size:9px;color:#94a3b8;display:inline-block;margin:0 4px">Rules 9–11</span><br>
+      <span class="file-chip validator" style="margin-top:4px">story_validator.py</span>
+      <span style="font-size:9px;color:#94a3b8;display:inline-block;margin:0 4px">Rules 12–14</span>
+    </div>
+
+    <div class="support-group" style="flex:0 0 auto;min-width:200px">
+      <div class="support-group-title">Metrics &amp; reporting</div>
+      <span class="file-chip output">output/metrics/*.json</span><br>
+      <span class="file-chip output" style="margin-top:4px">weekly_reports/*.md</span>
+      <div style="margin-top:6px;font-size:9px;color:#94a3b8">
+        Read by: /ba-metrics · /ba-metrics-report · scheduled task
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="section-div">
+
+<!-- ═══════════════════════════════════════════════
+     OUTPUT FOLDERS
+════════════════════════════════════════════════ -->
+<div class="layer">
+  <div class="layer-label">Output folders</div>
+  <div class="output-row">
+    <div class="output-folder">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 3.5C1 2.67 1.67 2 2.5 2H5L6 3.5H9.5C10.33 3.5 11 4.17 11 5V9C11 9.83 10.33 10.5 9.5 10.5H2.5C1.67 10.5 1 9.83 1 9V3.5Z" stroke="#d97706" stroke-width="1"/></svg>
+      output/intake/
+    </div>
+    <div style="color:#94a3b8;font-size:12px;align-self:center">→</div>
+    <div class="output-folder">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 3.5C1 2.67 1.67 2 2.5 2H5L6 3.5H9.5C10.33 3.5 11 4.17 11 5V9C11 9.83 10.33 10.5 9.5 10.5H2.5C1.67 10.5 1 9.83 1 9V3.5Z" stroke="#d97706" stroke-width="1"/></svg>
+      output/specs/
+    </div>
+    <div style="color:#94a3b8;font-size:12px;align-self:center">→</div>
+    <div class="output-folder">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 3.5C1 2.67 1.67 2 2.5 2H5L6 3.5H9.5C10.33 3.5 11 4.17 11 5V9C11 9.83 10.33 10.5 9.5 10.5H2.5C1.67 10.5 1 9.83 1 9V3.5Z" stroke="#d97706" stroke-width="1"/></svg>
+      output/stories/
+    </div>
+    <div style="color:#94a3b8;font-size:12px;align-self:center">→</div>
+    <div class="output-folder">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 3.5C1 2.67 1.67 2 2.5 2H5L6 3.5H9.5C10.33 3.5 11 4.17 11 5V9C11 9.83 10.33 10.5 9.5 10.5H2.5C1.67 10.5 1 9.83 1 9V3.5Z" stroke="#d97706" stroke-width="1"/></svg>
+      output/validation/
+    </div>
+    <div style="color:#94a3b8;font-size:12px;align-self:center">→</div>
+    <div class="output-folder">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 3.5C1 2.67 1.67 2 2.5 2H5L6 3.5H9.5C10.33 3.5 11 4.17 11 5V9C11 9.83 10.33 10.5 9.5 10.5H2.5C1.67 10.5 1 9.83 1 9V3.5Z" stroke="#d97706" stroke-width="1"/></svg>
+      output/metrics/
+    </div>
+  </div>
+</div>
+
+<hr class="section-div">
+
+<!-- ═══════════════════════════════════════════════
+     EXTERNAL SYSTEMS
+════════════════════════════════════════════════ -->
+<div class="layer">
+  <div class="layer-label">External systems (via MCP server)</div>
+  <div class="external-row">
+    <div class="external-box">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="1" y="1" width="12" height="12" rx="2" stroke="#3b82f6" stroke-width="1.2"/>
+        <rect x="3" y="4" width="8" height="1.5" rx="0.5" fill="#3b82f6"/>
+        <rect x="3" y="7" width="5" height="1.5" rx="0.5" fill="#3b82f6"/>
+      </svg>
+      Jira <span class="mcp-badge">MCP</span>
+      <span style="font-size:9px;color:#475569;margin-left:4px">update tickets · never create/delete</span>
+    </div>
+    <div class="external-box">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="1" y="1" width="12" height="12" rx="2" stroke="#3b82f6" stroke-width="1.2"/>
+        <rect x="3" y="3" width="8" height="2" rx="0.5" fill="#3b82f6"/>
+        <rect x="3" y="6" width="8" height="1" rx="0.5" fill="#3b82f6" opacity="0.5"/>
+        <rect x="3" y="8" width="6" height="1" rx="0.5" fill="#3b82f6" opacity="0.5"/>
+      </svg>
+      Confluence <span class="mcp-badge">MCP</span>
+      <span style="font-size:9px;color:#475569;margin-left:4px">saves as draft · BA sections only</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     LEGEND
+════════════════════════════════════════════════ -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch agent"></div> Agent</div>
+  <div class="legend-item"><div class="legend-swatch skill"></div> Skill / Command</div>
+  <div class="legend-item"><div class="legend-swatch skill2"></div> Installed skill (distill-doc, enrich-meeting)</div>
+  <div class="legend-item"><div class="legend-swatch optional"></div> Optional phase</div>
+  <div class="legend-item"><div class="legend-swatch output"></div> Output folder</div>
+  <div class="legend-item"><div class="legend-swatch external"></div> External system</div>
+</div>
+
+</body>
+</html>

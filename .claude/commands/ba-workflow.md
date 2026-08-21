@@ -11,28 +11,83 @@ Present this menu and wait for their choice:
 **MSC BA Workflow — what would you like to do?**
 
 1. **Spec only** — generate a functional specification from input materials
-2. **Stories only** — generate Jira BA stories from an existing spec
+2. **Stories only** — generate Jira BA stories from a spec or direct input
 3. **Full end-to-end** — spec → stories → validate → amend → publish
 4. **Validate and publish** — validate existing output and publish to Jira / Confluence
+
+---
+
+## Step 1a — Ask about intake preprocessing (Choices 1 and 3 only)
+
+After the user selects Choice 1 or 3, ask:
+
+> "Would you like to preprocess your input materials first? (PDFs, meeting recordings, Confluence pages)
+> 1. Yes — run /intake to clean and structure materials first
+> 2. No — skip intake and proceed directly to spec generation"
+
+- If **Yes** → proceed to [PHASE: INTAKE], then continue to [PHASE: SPEC]
+- If **No** → ask for raw input materials, then proceed to [PHASE: SPEC]
 
 ---
 
 ## Step 2 — Collect inputs based on choice
 
 ### Choice 1 — Spec only
-Ask: "Please provide your input materials — paste text, provide file paths, or share Confluence page URLs."
+If intake skipped: Ask "Please provide your input materials — paste text, provide file paths, or share Confluence page URLs."
+If intake completed: Use `output/intake/` files as input to spec generator.
 Wait for their response, then proceed to [PHASE: SPEC].
 
 ### Choice 2 — Stories only
-Ask: "Which spec file should I use? (leave blank to use the most recent file in output/specs/)"
+Ask: "Would you like to generate stories from an existing spec, or from direct input?
+1. From spec — use an existing file in output/specs/
+2. From direct input — provide interfaces and requirements directly"
 Wait for their response, then proceed to [PHASE: STORIES].
 
 ### Choice 3 — Full end-to-end
-Ask: "Please provide your input materials — paste text, provide file paths, or share Confluence page URLs."
+If intake skipped: Ask "Please provide your input materials — paste text, provide file paths, or share Confluence page URLs."
+If intake completed: Use `output/intake/` files as input to spec generator.
 Wait for their response, then proceed to [PHASE: SPEC] and continue through all phases in order.
 
 ### Choice 4 — Validate and publish
 Proceed directly to [PHASE: VALIDATE] using existing files in output/specs/ and output/stories/.
+
+---
+
+## PHASE: INTAKE (optional)
+
+### METRICS: Record intake start
+```bash
+INTAKE_START=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+python3 -c "
+import json
+with open('${METRICS_FILE}') as f: m = json.load(f)
+if 'intake_phase' not in m:
+    m['intake_phase'] = {'enabled': True, 'started_at': None, 'completed_at': None, 'materials_processed': {'pdfs': 0, 'meetings': 0, 'confluence_pages': 0, 'other': 0}}
+m['intake_phase']['enabled'] = True
+m['intake_phase']['started_at'] = '${INTAKE_START}'
+with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
+" 2>/dev/null || true
+```
+
+Invoke the `intake-preprocessor` agent (or run the `/intake` skill) with the user's provided materials.
+
+Wait for it to complete and confirm that files are ready in `output/intake/`.
+
+### METRICS: Record intake complete
+```bash
+INTAKE_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+PDFS_PROCESSED=[number of PDFs]
+MEETINGS_PROCESSED=[number of meetings]
+CONFLUENCE_PROCESSED=[number of confluence pages]
+OTHER_PROCESSED=[other]
+python3 -c "
+import json
+with open('${METRICS_FILE}') as f: m = json.load(f)
+m['intake_phase']['completed_at'] = '${INTAKE_END}'
+m['intake_phase']['materials_processed'] = {'pdfs': ${PDFS_PROCESSED}, 'meetings': ${MEETINGS_PROCESSED}, 'confluence_pages': ${CONFLUENCE_PROCESSED}, 'other': ${OTHER_PROCESSED}}
+with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
+" 2>/dev/null || true
+```
 
 ---
 
@@ -57,9 +112,25 @@ m = {
   'session_start': '${SESSION_START}',
   'session_end': None,
   'total_duration_minutes': None,
+  'timestamp_created': '${SESSION_START}',
+  'intake_phase': {
+    'enabled': False,
+    'started_at': None,
+    'completed_at': None,
+    'materials_processed': {'pdfs': 0, 'meetings': 0, 'confluence_pages': 0, 'other': 0}
+  },
+  'validation_mode': 'conversational',
   'phases': {
-    'spec': {'started_at': None, 'completed_at': None, 'duration_minutes': None, 'iterations': 0, 'output_file': None},
-    'stories': {'started_at': None, 'completed_at': None, 'duration_minutes': None, 'iterations': 0, 'output_file': None, 'cr_count': None, 'us_count': None},
+    'spec': {
+      'started_at': None, 'completed_at': None, 'duration_minutes': None,
+      'iterations': 0, 'output_file': None,
+      'template_auto_fixes': 0, 'template_manual_fixes': 0
+    },
+    'stories': {
+      'started_at': None, 'completed_at': None, 'duration_minutes': None,
+      'iterations': 0, 'output_files': [], 'cr_count': None, 'us_count': None,
+      'input_source': 'spec', 'stories_auto_fixed': 0, 'stories_manual_fixed': 0
+    },
     'validation': {'runs': []},
     'amend': {'runs': []},
     'publish': {'started_at': None, 'completed_at': None, 'jira_tickets': [], 'confluence_page': None}
@@ -119,6 +190,46 @@ with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
 If the agent reports errors or gaps, tell the user before continuing:
 > "The spec was saved with [n] TO BE CONFIRMED fields. You may want to resolve these before generating stories."
 
+### METRICS: Record spec template fixes
+After the spec generator reports its template validation result, run:
+```bash
+AUTO_FIXES=[number of auto-fixed template issues, 0 if none]
+MANUAL_FIXES=[number of unresolved template issues, 0 if none]
+python3 -c "
+import json
+with open('${METRICS_FILE}') as f: m = json.load(f)
+m['phases']['spec']['template_auto_fixes'] = ${AUTO_FIXES}
+m['phases']['spec']['template_manual_fixes'] = ${MANUAL_FIXES}
+with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
+" 2>/dev/null || true
+```
+
+### Optional: Spec review
+
+Ask the user:
+
+> "How would you like to review the spec before generating stories?
+> 1. Conversational review — tell me to fix any issues in chat (quick, interactive)
+> 2. Automated validation — run ba-validator with structural Rules 9–11 (strict, repeatable)
+> 3. Both — conversational review first, then automated validation as final check
+> 4. Skip review — proceed directly to story generation"
+
+Update the validation_mode in metrics:
+```bash
+VALIDATION_MODE="[conversational|automated|both|skipped]"
+python3 -c "
+import json
+with open('${METRICS_FILE}') as f: m = json.load(f)
+m['validation_mode'] = '${VALIDATION_MODE}'
+with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
+" 2>/dev/null || true
+```
+
+- **Conversational:** User reviews the spec in chat, asks agent to fix issues. When done, ask "Ready to generate stories?"
+- **Automated:** Invoke `ba-validator` with Rules 9–11 only. If BLOCKERs found → must fix before proceeding. If clear → continue.
+- **Both:** Conversational first, then automated as final check.
+- **Skip:** Proceed directly.
+
 Ask: "Continue to story generation? (yes / no)"
 - Yes → proceed to [PHASE: STORIES]
 - No → stop and tell the user the spec is saved and they can continue later with option 2 or 3
@@ -139,19 +250,22 @@ with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
 "
 ```
 
-Invoke the `ba-story-generator` agent with the spec file from `output/specs/`.
+Invoke the `ba-story-generator` agent. Pass the spec file from `output/specs/` (Option A) or the user's direct requirements input (Option B).
 
-Wait for it to complete and confirm the stories file path saved in `output/stories/`.
+Wait for it to complete and confirm the story file paths saved in `output/stories/`.
 
-Tell the user how many CRs and User Stories were generated and any ADF interfaces excluded.
+Tell the user how many CRs and User Stories were generated, any ADF interfaces excluded, and the template validation summary per story.
 
 ### METRICS: Record stories complete
 After the agent reports the CR and US counts, run:
 ```bash
 STORIES_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-STORIES_FILE="[path to saved stories file]"
+STORY_FILES='["path1.md", "path2.md"]'  # JSON array of all output story file paths
 CR_COUNT=[number of CRs generated]
 US_COUNT=[number of USs generated]
+INPUT_SOURCE="[spec|direct]"
+STORIES_AUTO_FIXED=[number of stories auto-fixed by validator]
+STORIES_MANUAL_FIXED=[number of stories saved with warnings]
 python3 -c "
 import json
 from datetime import datetime
@@ -161,14 +275,31 @@ if start:
     diff = datetime.fromisoformat('${STORIES_END}'.replace('Z','+00:00')) - datetime.fromisoformat(start.replace('Z','+00:00'))
     m['phases']['stories']['duration_minutes'] = round(diff.total_seconds() / 60, 1)
 m['phases']['stories']['completed_at'] = '${STORIES_END}'
-m['phases']['stories']['output_file'] = '${STORIES_FILE}'
+m['phases']['stories']['output_files'] = ${STORY_FILES}
 m['phases']['stories']['cr_count'] = ${CR_COUNT}
 m['phases']['stories']['us_count'] = ${US_COUNT}
+m['phases']['stories']['input_source'] = '${INPUT_SOURCE}'
+m['phases']['stories']['stories_auto_fixed'] = ${STORIES_AUTO_FIXED}
+m['phases']['stories']['stories_manual_fixed'] = ${STORIES_MANUAL_FIXED}
 with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
-"
+" 2>/dev/null || true
 ```
 
-If running as part of a full end-to-end (Choice 3), automatically continue to [PHASE: VALIDATE].
+### Optional: Story review
+
+Ask the user:
+
+> "How would you like to review the stories?
+> 1. Conversational review — tell me to fix any issues in chat
+> 2. Automated validation — run ba-validator with all Rules 1–14
+> 3. Both — conversational review first, then automated validation
+> 4. Skip review — proceed directly to publish"
+
+- **Conversational:** User reviews stories in chat, asks agent to fix issues. When done, proceed to PHASE: PUBLISH.
+- **Automated (or Both):** Proceed to [PHASE: VALIDATE].
+- **Skip:** Proceed to [PHASE: PUBLISH].
+
+If running as part of a full end-to-end (Choice 3), automatically continue to [PHASE: VALIDATE] unless user chose conversational-only or skip.
 Otherwise ask: "Continue to validation? (yes / no)"
 - Yes → proceed to [PHASE: VALIDATE]
 - No → stop and tell the user the stories are saved and they can continue later with option 4
@@ -189,21 +320,22 @@ Wait for it to complete and report the summary: number of BLOCKERs, WARNINGs, an
 ### METRICS: Record validation complete
 ```bash
 VAL_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-BLOCKERS=[number]
-WARNINGS=[number]
-INFOS=[number]
+STRUCT_BLOCKERS=[structural blockers from Rules 9-14]
+STRUCT_WARNINGS=[structural warnings from Rules 9-14]
+CONTENT_BLOCKERS=[content blockers from Rules 1-8]
+CONTENT_WARNINGS=[content warnings from Rules 1-8]
+CONTENT_INFOS=[content infos from Rules 1-8]
 python3 -c "
 import json
 with open('${METRICS_FILE}') as f: m = json.load(f)
 m['phases']['validation']['runs'].append({
     'started_at': '${VAL_START}',
     'completed_at': '${VAL_END}',
-    'blockers': ${BLOCKERS},
-    'warnings': ${WARNINGS},
-    'infos': ${INFOS}
+    'structural_violations': {'blockers': ${STRUCT_BLOCKERS}, 'warnings': ${STRUCT_WARNINGS}},
+    'content_violations': {'blockers': ${CONTENT_BLOCKERS}, 'warnings': ${CONTENT_WARNINGS}, 'infos': ${CONTENT_INFOS}}
 })
 with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
-"
+" 2>/dev/null || true
 ```
 
 If there are **0 BLOCKERs**, ask:
@@ -237,6 +369,8 @@ AMEND_END=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 APPLIED=[number applied]
 EDITED=[number edited]
 SKIPPED=[number skipped]
+STRUCT_FIXES=[number of structural fixes applied, i.e. from Rules 9-14]
+CONTENT_FIXES=[number of content fixes applied, i.e. from Rules 1-8]
 python3 -c "
 import json
 with open('${METRICS_FILE}') as f: m = json.load(f)
@@ -245,11 +379,13 @@ m['phases']['amend']['runs'].append({
     'completed_at': '${AMEND_END}',
     'applied': ${APPLIED},
     'edited': ${EDITED},
-    'skipped': ${SKIPPED}
+    'skipped': ${SKIPPED},
+    'structural_fixes': ${STRUCT_FIXES},
+    'content_fixes': ${CONTENT_FIXES}
 })
 m['feedback_loops'] = m.get('feedback_loops', 0) + 1
 with open('${METRICS_FILE}', 'w') as f: json.dump(m, f, indent=2)
-"
+" 2>/dev/null || true
 ```
 
 If any BLOCKERs were skipped, warn the user:
