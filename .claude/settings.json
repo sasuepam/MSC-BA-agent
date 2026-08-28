@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "confluence_update_page",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 mcp/scripts/validate_before_write.py",
+            "timeout": 30,
+            "statusMessage": "Validating BA spec before writing to Confluence..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "confluence_update_page",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 mcp/scripts/post_generate_report.py",
+            "timeout": 15,
+            "statusMessage": "Generating post-write BA report..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|mcp__msc-ba__jira_update_issue|mcp__msc-ba__confluence_update_page",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 mcp/scripts/metrics_auto_update.py",
+            "timeout": 15,
+            "statusMessage": "Updating metrics..."
+          }
+        ]
+      }
+    ]
+  }
+}
