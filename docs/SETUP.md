@@ -36,14 +36,13 @@ Used to clone the repository.
 ### Python 3.12 or later
 Required by the MCP server. Earlier versions will not work.
 - Download from https://www.python.org/downloads/
-- **Windows:** During installation, tick **"Add Python to PATH"**
-- **Verify:** `python --version` (Windows) or `python3 --version` (Mac/Linux)
+- **Verify:** `python3 --version`
 
 ### uv
 A fast Python package manager used to install and run the MCP server.
 
-Open **Command Prompt or PowerShell** and run:
-```
+Run:
+```bash
 pip install uv
 ```
 - **Verify:** `uv --version`
@@ -63,12 +62,7 @@ Required to connect to Jira and Confluence. You will need it during the `/setup`
 
 ## 2. Clone the repository
 
-> **How to open Command Prompt or PowerShell**
-> Press **Win + R**, type `cmd` (for Command Prompt) or `powershell` (for PowerShell), and press Enter.
-> Alternatively, search for **Command Prompt** or **Windows PowerShell** in the Start menu and open it.
-> Either works — all commands in this guide are the same in both.
-
-Open a **Command Prompt or PowerShell** window and clone the repository:
+Open a terminal and clone the repository:
 
 ```
 git clone https://github.com/sasuepam/MSC-BA-agent.git
@@ -81,8 +75,8 @@ cd MSC-BA-agent
 ```
 
 > **Choosing a specific location first:**
-> ```
-> cd "C:\Users\[your_user]\Documents"
+> ```bash
+> cd ~/Documents
 > git clone https://github.com/sasuepam/MSC-BA-agent.git
 > cd MSC-BA-agent
 > ```
@@ -108,14 +102,14 @@ MSC-BA-agent/
 
 ## 3. Launch Codemie
 
-Open a **Command Prompt or PowerShell** window and navigate to the project root. It is important to launch Codemie from this folder — the agents, skills, and `CLAUDE.md` conventions only load when Codemie is started from here.
+Open a terminal window and navigate to the project root. It is important to launch Codemie from this folder — the agents, skills, and `CLAUDE.md` conventions only load when Codemie is started from here.
 
 ```
-cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
+cd /path/to/MSC-BA-agent
 codemie-claude
 ```
 
-Codemie opens inside that same Command Prompt or PowerShell window. You are now ready to run the setup wizard.
+Codemie opens inside that same terminal window. You are now ready to run the setup wizard.
 
 ---
 
@@ -154,7 +148,7 @@ Creates the credentials file from your answers. Reports: `✅ Credentials saved 
 Runs `uv sync` inside `mcp/` to install all required packages. Reports: `✅ Dependencies installed`
 
 **Step 6 — Prompts you to start the MCP server**
-Gives you the exact command to run in a second Command Prompt or PowerShell window (see [Step 5 below](#5-start-the-mcp-server)) and waits for you to confirm it is running before continuing.
+Gives you the exact command to run in a second terminal window (see [Step 5 below](#5-start-the-mcp-server)) and waits for you to confirm it is running before continuing.
 
 **Step 7 — Registers the MCP server with Codemie**
 Runs `codemie-claude mcp add` to connect Codemie to the local MCP server. If automatic registration fails, it gives you the manual fallback (see [Manual configuration reference](#8-manual-configuration-reference)).
@@ -171,10 +165,10 @@ The MCP connection only takes effect after a restart. The wizard tells you how t
 
 The `/setup` wizard will prompt you to do this at the right moment (Step 6 of the wizard), but here is the command for reference.
 
-Open a **second Command Prompt or PowerShell window** (leave your Codemie window open) and run:
+Open a **second terminal window** (leave your Codemie window open) and run:
 
 ```
-cd "C:\Users\[your_user]\Documents\MSC-BA-agent\mcp"
+cd mcp
 uv run msc-mcp-server
 ```
 
@@ -186,7 +180,7 @@ Application startup complete.
 
 Once you see this, go back to the `/setup` wizard in your Codemie window and type `ready` to continue.
 
-**Do not close this Command Prompt or PowerShell window.** The server runs in the foreground. Closing it stops all Jira and Confluence tools until you restart it.
+**Do not close this terminal window.** The server runs in the foreground. Closing it stops all Jira and Confluence tools until you restart it.
 
 > **Port already in use?**
 > If you see a port conflict error, either a previous MCP server session is still running (reuse it — no restart needed) or another process has taken port 8080. To change the port, run `/setup` again and enter a different port number when prompted.
@@ -197,9 +191,9 @@ Once you see this, go back to the `/setup` wizard in your Codemie window and typ
 
 After the `/setup` wizard completes, restart Codemie so the MCP server connection takes effect:
 
-- **Command Prompt / PowerShell:** type `/exit` to quit Codemie, then run `codemie-claude` again from the project root in the same window
-- **Desktop app:** press `Ctrl+R`
-- **VS Code extension:** open the Command Palette (`Ctrl+Shift+P`) and run `Codemie: Restart`
+- **Terminal:** type `/exit` to quit Codemie, then run `codemie-claude` again from the project root
+- **Desktop app:** press `Cmd+R` (Mac) or `Ctrl+R` (Windows)
+- **VS Code extension:** open the Command Palette and run `Codemie: Restart`
 
 Once restarted, run the verification command:
 
@@ -221,7 +215,7 @@ The verify mode will:
 ✅ Jira connected
 ```
 
-If the MCP server is not reachable, check that the server Command Prompt or PowerShell window (Step 5) is still open and running.
+If the MCP server is not reachable, check that the server terminal window (Step 5) is still open and running.
 
 Once `/setup verify` passes, you are fully set up. Type `/ba-workflow` to start.
 
@@ -231,17 +225,17 @@ Once `/setup verify` passes, you are fully set up. Type `/ba-workflow` to start.
 
 ## 7. Your daily workflow
 
-Every time you start a new working session, you need two Command Prompt or PowerShell windows open.
+Every time you start a new working session, you need two terminal windows open.
 
-**Window 1 — Start the MCP server (keep this window open throughout your session):**
-```
-cd "C:\Users\[your_user]\Documents\MSC-BA-agent\mcp"
+**Terminal 1 — Start the MCP server (keep this open throughout your session):**
+```bash
+cd mcp
 uv run msc-mcp-server
 ```
 
-**Window 2 — Launch Codemie:**
-```
-cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
+**Terminal 2 — Launch Codemie:**
+```bash
+cd /path/to/MSC-BA-agent
 codemie-claude
 ```
 
@@ -260,10 +254,10 @@ If the `/setup` wizard cannot complete a step automatically, here is how to do e
 
 ### Manually create mcp/.env
 
-In **Command Prompt or PowerShell**, from the project root:
+In a terminal, from the project root:
 ```
 cd mcp
-copy .env.example .env
+cp .env.example .env
 ```
 
 Open `mcp/.env` and fill in:
@@ -286,7 +280,7 @@ MSC_CONFLUENCE_TOKEN=your-api-token
 
 ### Manually install dependencies
 
-In **Command Prompt or PowerShell**, from the project root:
+In a terminal, from the project root:
 ```
 cd mcp
 uv sync
@@ -294,7 +288,7 @@ uv sync
 
 ### Manually register the MCP server with Codemie
 
-In **Command Prompt or PowerShell**:
+In a terminal:
 ```
 codemie-claude mcp add msc-ba --transport http http://localhost:8080/mcp
 ```
@@ -319,27 +313,22 @@ Verify it was added: `codemie-claude mcp list`
 
 ### "uv: command not found"
 
-uv was not added to your PATH during installation.
-
-Open a new **Command Prompt or PowerShell** window and use the full path to uv:
-```
-%APPDATA%\Python\Python314\Scripts\uv.exe run msc-mcp-server
-```
-Or reinstall uv and reopen the window:
-```
+uv was not added to your PATH during installation. Reinstall and reopen your terminal:
+```bash
 pip install uv
 ```
+Then verify with `uv --version`.
 
 ---
 
 ### "Python version too old" or "python: command not found"
 
-The MCP server requires Python 3.12+. Check in **Command Prompt or PowerShell**:
+The MCP server requires Python 3.12+. Check in a terminal:
 ```
 python --version
 ```
 
-If it returns a version below 3.12 or is not found, download Python from https://www.python.org/downloads/. During installation, tick **"Add Python to PATH"**. Then open a new Command Prompt or PowerShell window and run:
+If it returns a version below 3.12 or is not found, download Python from https://www.python.org/downloads/. Then run:
 ```
 uv python install 3.12
 ```
@@ -371,9 +360,9 @@ Also confirm that your email in `mcp/.env` exactly matches the Atlassian account
 
 Codemie must be launched from the project root — the folder containing `CLAUDE.md` and the `agents/` directory. If you launched from a different folder, the custom commands will not load. Also confirm you are using `codemie-claude`, not the standard `claude` CLI.
 
-Open **Command Prompt or PowerShell** and run:
+Open a terminal and run:
 ```
-cd "C:\Users\[your_user]\Documents\MSC-BA-agent"
+cd /path/to/MSC-BA-agent
 codemie-claude
 ```
 
@@ -383,6 +372,11 @@ codemie-claude
 
 A previous session's MCP server is likely still running — you can reuse it without restarting.
 
-To free the port if needed, open **Task Manager** (press `Ctrl+Shift+Esc`), find the `python` process, and click **End task**. Then restart the MCP server in a new Command Prompt or PowerShell window.
+To free the port if needed, find and stop the existing python process:
+```bash
+lsof -i :8080
+kill <PID>
+```
+Then restart the MCP server.
 
 Alternatively, run `/setup` and choose a different port (e.g. `8081`).

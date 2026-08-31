@@ -26,6 +26,7 @@ The agent never invents content. Any information it cannot find in your input ma
 - [What gets produced](#what-gets-produced)
 - [Agents and skills](#agents-and-skills)
 - [Output folder structure](#output-folder-structure)
+- [Metrics tracking](#metrics-tracking)
 - [Reference documents](#reference-documents)
 - [Key things to know](#key-things-to-know)
 - [Troubleshooting](#troubleshooting)
@@ -34,7 +35,7 @@ The agent never invents content. Any information it cannot find in your input ma
 
 ## First-time setup
 
-Follow [`docs/SETUP.md`](docs/SETUP.md) once before using the agent for the first time. It covers installing Claude Code, configuring your Atlassian API credentials, and starting the MCP server.
+Follow [`docs/SETUP.md`](docs/SETUP.md) once before using the agent for the first time. It covers installing Claude Code / Codemie, configuring your Atlassian API credentials, and starting the MCP server.
 
 ---
 
@@ -44,14 +45,9 @@ You need **two terminals** open each time you work.
 
 **Terminal 1 — MCP server** (keep this running in the background):
 ```bash
-cd "C:\Users\[your_user]\MSC_BA_Agent\MSC_BA_Agent\mcp"
+cd mcp
 uv run msc-mcp-server
 ```
-
-> **Windows note:** If `uv` is not found, use the full path in Command Prompt or PowerShell:
-> ```
-> %APPDATA%\Python\Python314\Scripts\uv.exe run msc-mcp-server
-> ```
 
 You should see:
 ```
@@ -63,9 +59,13 @@ If port 8080 is already in use, the server from a previous session is still runn
 
 **Terminal 2 — Claude Code** (this is where you work):
 ```bash
-cd "C:\Users\[your_user]\MSC_BA_Agent\MSC_BA_Agent"
 codemie-claude
 ```
+
+> **Standard Claude Code fallback** (outside EPAM infrastructure):
+> ```bash
+> claude
+> ```
 
 ---
 
@@ -81,12 +81,16 @@ You will see a menu:
 
 ```
 1. Spec only            — generate a functional spec from input materials
-2. Stories only         — generate Jira BA stories from an existing spec
+2. Stories only         — generate Jira BA stories (from spec or direct input)
 3. Full end-to-end      — spec → stories → validate → amend → publish
 4. Validate and publish — validate existing output and publish to Jira / Confluence
 ```
 
 Choose the option that matches what you need. Claude will guide you through each step interactively.
+
+**Option 2 — Stories only** offers two input modes:
+- **From spec** — choose an existing spec file from `output/specs/` (or leave blank for the most recent)
+- **Direct input** — provide interface names and requirements directly, without a spec file
 
 You can also invoke any individual agent or skill directly — see [Agents and skills](#agents-and-skills) below.
 
@@ -97,7 +101,7 @@ You can also invoke any individual agent or skill directly — see [Agents and s
 When prompted for input materials, you can provide any combination of:
 
 - **Pasted text** — copy and paste an email, Teams message, meeting notes, or requirements description directly into the chat
-- **File paths** — e.g. `C:\Users\[your_user]\Documents\requirements.docx`
+- **File paths** — e.g. `~/Documents/requirements.docx`
 - **Confluence page URLs** — e.g. `https://msccruises.atlassian.net/wiki/spaces/...` — the agent fetches the page live via the MCP server
 - **Jira ticket URLs** — e.g. `https://smartship.atlassian.net/browse/MDTTPU-1234`
 - **Sequence diagrams** — paste PlantUML directly into the chat
@@ -114,7 +118,7 @@ Input materials
       │
       ▼
 ┌─────────────────────────────┐
-│  functional-spec-generator   │  → output/specs/functional_spec_[name].html
+│  functional-spec-generator   │  → output/specs/functional_spec_<req-id>_[name].html
 │  (agent)                     │    Sections: Document History, Reference Docs,
 │                              │    Feature Summary, Business Requirements,
 │                              │    Use Cases, NFRs, Test Scenarios & ACs
@@ -122,9 +126,10 @@ Input materials
                │
                ▼
 ┌─────────────────────────────┐
-│  ba-story-generator          │  → output/stories/[name].html
-│  (agent)                     │    Generates Change Requests and User Stories
-│                              │    Applies ADF exclusion and splitting rules
+│  ba-story-generator          │  → output/stories/<req-id>-[slug]-cr-001.md
+│  (agent)                     │    output/stories/<req-id>-[slug]-us-001.md
+│                              │    One file per story. Applies ADF exclusion
+│                              │    and splitting rules.
 └──────────────┬──────────────┘
                │
                ▼
@@ -170,12 +175,13 @@ The spec covers:
 - The **API layer specifically** in the NFRs and Test Scenarios — written for the API(s) the MuleSoft team will build or change
 
 **What the agent does:**
-1. Reads all input materials (pasted text, files, Confluence pages, URLs)
-2. Identifies the overall solution and the specific MuleSoft API(s) involved
-3. Fills in all spec sections using the source materials
-4. Marks gaps as `[TO BE CONFIRMED]` rather than inventing content
-5. Saves the spec to `output/specs/functional_spec_[feature_name].html`
-6. Reports the file path and all TO BE CONFIRMED fields found
+1. Asks for the requirement ID (`NEW-XXXX`) before proceeding
+2. Reads all input materials (pasted text, files, Confluence pages, URLs)
+3. Identifies the overall solution and the specific MuleSoft API(s) involved
+4. Fills in all spec sections using the source materials
+5. Marks gaps as `[TO BE CONFIRMED]` rather than inventing content
+6. Saves the spec to `output/specs/functional_spec_<req-id>_[feature_name].html`
+7. Reports the file path and all TO BE CONFIRMED fields found
 
 For Test Scenarios, every Use Case must have at least one happy path test, one alternative path test, and one error scenario. Missing categories are flagged as gaps — never silently omitted.
 
@@ -185,10 +191,10 @@ For Test Scenarios, every Use Case must have at least one happy path test, one a
 
 **Agent:** `ba-story-generator`
 
-Reads the functional spec and generates Jira-ready BA stories (Change Requests and User Stories).
+Reads the functional spec (or direct input) and generates Jira-ready BA stories (Change Requests and User Stories), one file per story.
 
 **ADF exclusion rule (applied first):**
-Any interface prefixed with `ADF` (e.g. ADF108, ADF204) is completely ignored. These interfaces are owned by another team and must never produce a story. They are treated as background reference only.
+Any interface prefixed with `ADF` (e.g. ADF108, ADF204) is completely ignored. These interfaces are owned by another team and must never produce a story.
 
 **Splitting logic:**
 
@@ -201,9 +207,11 @@ Any interface prefixed with `ADF` (e.g. ADF108, ADF204) is completely ignored. T
 
 The agent reports:
 - How many CRs and User Stories were generated
-- Any ADF interfaces excluded and why
-- Any fields left blank due to missing spec content
-- The full path to the saved stories file
+- Any ADF interfaces excluded
+- Template compliance per story (Pass / issues found)
+- The full path to each saved story file
+
+**When invoked as Stories only (option 2)**, the agent stops after generation — no validation or publish prompt. Run option 4 when you are ready to validate and publish.
 
 ---
 
@@ -240,7 +248,7 @@ Walks through every flag in the validation report one at a time (BLOCKERs first,
 2. **Edit manually** — you provide the replacement text and Claude applies it
 3. **Skip** — the flag is left unresolved; you are warned if any BLOCKERs are skipped before publishing
 
-After all flags are processed, a summary shows how many were applied, edited, and skipped.
+After all flags are processed, a summary shows how many were applied, edited, and skipped — split by structural fixes (wrong story construction) and content fixes (missing or incomplete content).
 
 ---
 
@@ -257,25 +265,10 @@ Updates an existing Jira ticket's description and acceptance criteria from a gen
 
 **Process:**
 1. You provide a Jira ticket key (e.g. `DTTP-1234`) and identify which story maps to it
-2. The agent fetches the current ticket and reads the matching story block
+2. The agent fetches the current ticket and reads the matching story file
 3. The agent previews the description and acceptance criteria it will write
 4. You confirm before any update is made
 5. The agent updates the ticket and confirms the fields were written correctly
-
-**Acceptance criteria format in Jira:**
-Each scenario has a bold heading on its own line, followed by its Given / When / Then statements:
-
-```
-**Scenario 1: [scenario name]**
-Given [precondition]
-When [action]
-Then [expected outcome]
-
-**Scenario 2: [scenario name]**
-Given [precondition]
-When [action]
-Then [expected outcome]
-```
 
 ---
 
@@ -295,11 +288,9 @@ Updates an existing Confluence page with the BA-owned sections from a generated 
 1. You provide a Confluence page URL and the spec file to use
 2. The agent fetches the current page and extracts all SA-owned sections and Confluence macros verbatim
 3. The agent assembles the updated page body: BA sections from the spec, SA sections preserved unchanged
-4. A new Document History row is appended (author, date using the Confluence date macro, BA sections updated, status: Draft)
+4. A new Document History row is appended (author, date, BA sections updated, status: Draft)
 5. You confirm the update before it is submitted
 6. The agent saves the draft and confirms
-
-All URLs written to the page are rendered as clickable hyperlinks. All Confluence macros (TOC, PlantUML, status macros, whiteboard embeds, etc.) are preserved exactly as they appear on the current page.
 
 The draft URL format is: `https://msccruises.atlassian.net/pages/resumedraft.action?draftId=[page_id]`
 
@@ -322,7 +313,7 @@ Both templates are used consistently across the ba-story-generator and jira-publ
 | High Level Architecture Document | Link if available in spec, otherwise blank |
 | API Documentation | Link if available in spec, otherwise blank |
 | Confluence Page | Link if available in spec, otherwise blank |
-| Acceptance Criteria (BDD) | Given / When / Then blocks — separate block per scenario, each scenario with a bold heading |
+| Acceptance Criteria (BDD) | Given / When / Then blocks — separate block per scenario, each with a bold heading |
 
 ### User Story
 
@@ -345,7 +336,7 @@ Both templates are used consistently across the ba-story-generator and jira-publ
 | High Level Architecture Document | Link if available, otherwise blank |
 | API Documentation | Link if available, otherwise blank |
 | Specs | Link if available, otherwise blank |
-| Acceptance Criteria (BDD) | Given / When / Then blocks — separate block per scenario, each scenario with a bold heading |
+| Acceptance Criteria (BDD) | Given / When / Then blocks — separate block per scenario, each with a bold heading |
 
 ---
 
@@ -371,14 +362,12 @@ The functional specification has eleven sections. Seven are written by the BA ag
 
 ## Functional spec — writing standards
 
-The following conventions are enforced by the agent and should be maintained during manual amendments:
-
 | Section | Rule |
 |---|---|
 | Feature Summary | Business language only — no API names, field API names, interface IDs, or schema refs |
 | Business Requirements | MuleSoft-relevant requirements only — exclude requirements owned by other systems (Salesforce, CDP, etc.) |
 | NFRs | Scope to what is new or changed in this feature only — do not restate pre-existing requirements |
-| Test Scenarios — Acceptance Criteria | MuleSoft interface behaviour only — what the interface accepts, rejects, forwards, or returns (including orchestration steps). Do not describe what downstream systems do with the data unless it is an error scenario |
+| Test Scenarios — Acceptance Criteria | MuleSoft interface behaviour only — what the interface accepts, rejects, forwards, or returns. Do not describe what downstream systems do with the data unless it is an error scenario |
 | Document History — Tickets | Leave blank unless a ticket reference is explicitly provided |
 
 ---
@@ -386,24 +375,27 @@ The following conventions are enforced by the agent and should be maintained dur
 ## What gets produced
 
 | Output | Location | Description |
-|--------|----------|-------------|
-| Functional specification | `output/specs/functional_spec_[name].html` | HTML spec ready for Confluence |
-| BA stories | `output/stories/[name].html` | Change Requests and User Stories ready for Jira |
+|---|---|---|
+| Functional specification | `output/specs/functional_spec_<req-id>_[name].html` | HTML spec ready for Confluence |
+| BA stories | `output/stories/<req-id>-[slug]-cr-001.md` / `us-001.md` | One `.md` file per CR or User Story, ready for Jira |
 | Validation report | `output/validation/validation-report.md` | Flags issues before publishing |
+| Metrics record | `output/metrics/metrics_[slug].json` | Per-feature pipeline metrics |
 
 ---
 
 ## Agents and skills
 
 | File | Type | What it does | Invoked by |
-|------|------|---|------------|
+|---|---|---|---|
 | `agents/functional-spec-generator.md` | Agent | Generates the HTML functional spec from raw input materials | `ba-workflow`, or directly |
-| `agents/ba-story-generator.md` | Agent | Generates CRs and User Stories from the spec; applies ADF exclusion and splitting rules | `ba-workflow`, or directly |
-| `agents/ba-validator.md` | Agent | Validates spec and stories output; produces a flag report with BLOCKERs, WARNINGs, and INFOs | `ba-workflow`, or directly |
+| `agents/ba-story-generator.md` | Agent | Generates CRs and User Stories; applies ADF exclusion and splitting rules | `ba-workflow`, or directly |
+| `agents/ba-validator.md` | Agent | Validates spec and stories; produces a flag report with BLOCKERs, WARNINGs, and INFOs | `ba-workflow`, or directly |
 | `agents/jira-publisher.md` | Agent | Updates description and acceptance criteria on existing Jira tickets | `ba-workflow`, or directly |
 | `agents/confluence-publisher.md` | Agent | Updates BA sections on a Confluence page; always saves as draft | `ba-workflow`, or directly |
-| `.claude/commands/ba-amend.md` | Skill | Interactive amendment tool — walks through validation flags one by one | `/ba-amend`, or via `ba-workflow` |
 | `.claude/commands/ba-workflow.md` | Skill | Main orchestrator — presents the workflow menu and chains agents in order | `/ba-workflow` |
+| `.claude/commands/ba-amend.md` | Skill | Interactive amendment — walks through validation flags one by one | `/ba-amend`, or via `ba-workflow` |
+| `.claude/commands/ba-metrics.md` | Skill | Displays pipeline metrics for all tracked features | `/ba-metrics` |
+| `.claude/commands/ba-metrics-report.md` | Skill | Generates the weekly BA metrics report; runs automatically every Friday at 5pm | `/ba-metrics-report` |
 
 ---
 
@@ -412,14 +404,45 @@ The following conventions are enforced by the agent and should be maintained dur
 ```
 output/
 ├── specs/
-│   └── functional_spec_[feature_name].html   ← generated functional specification
+│   └── functional_spec_<req-id>_[feature_name].html   ← generated functional specification
 │
 ├── stories/
-│   └── [feature_name].html                   ← Jira-ready CRs and User Stories
+│   ├── <req-id>-[slug]-cr-001.md                       ← one file per Change Request
+│   └── <req-id>-[slug]-us-001.md                       ← one file per User Story
 │
-└── validation/
-    └── validation-report.md                  ← flags, severities, and suggested fixes
+├── validation/
+│   └── validation-report.md                            ← flags, severities, and suggested fixes
+│
+└── metrics/
+    ├── metrics_[slug].json                              ← per-feature pipeline metrics
+    ├── exports/
+    │   └── metrics_export_[date].csv                   ← CSV export (/ba-metrics --csv)
+    └── weekly_reports/
+        └── weekly_report_[date].md                     ← Friday metrics report
 ```
+
+> `output/` is excluded from version control — it is never committed to the repository.
+
+---
+
+## Metrics tracking
+
+Every feature processed through `/ba-workflow` is automatically tracked. Metrics are written to `output/metrics/metrics_[slug].json` at each phase boundary and updated in real time via PostToolUse hooks.
+
+**Tracked fields include:** requirement ID, session duration, per-phase iterations, CR/US counts, structural vs content violation split, template compliance rate, feedback loops, and Jira/Confluence publish targets.
+
+### Metrics commands
+
+| Command | Description |
+|---|---|
+| `/ba-metrics` | Summary table for all features |
+| `/ba-metrics --week` | This week's features only (Mon–Fri 6pm cutoff) |
+| `/ba-metrics --detail [slug]` | Full per-phase breakdown for one feature |
+| `/ba-metrics --csv` | Export all metrics to `output/metrics/exports/` |
+| `/ba-metrics --trend` | Improvement trends across all features |
+| `/ba-metrics-report` | Generate the weekly report (also runs automatically every Friday at 5pm) |
+
+**Template compliance** is calculated as: `1 − (structural fixes / total fixes)` across all amendment runs. A structural fix is one that corrects wrong story construction (wrong CR/US type, ADF slippage, wrong splits); a content fix is one that resolves missing or incomplete content.
 
 ---
 
@@ -439,22 +462,18 @@ output/
 - **Missing information is never invented** — gaps are always marked `[TO BE CONFIRMED]` for you to fill in
 - **ADF interfaces are excluded from story generation** (e.g. ADF108) — this is by design; they are owned by another team
 - **New interfaces always become User Stories** — existing interface changes always become CRs
+- **Stories are saved as individual `.md` files**, one per CR or User Story, named with the requirement ID prefix
 - **Confluence pages are always saved as drafts** — a human must review and publish manually
 - **SA-owned sections are never touched** — Solution Overview, Involved Interfaces, Sequence Diagrams, and Monitoring & Alerting Guidelines are preserved exactly as the Solution Architect left them
-- **All Confluence macros are preserved** — TOC, PlantUML, whiteboard embeds, and any other `ac:` macros are copied verbatim from the current page
 - **Jira tickets are never created or deleted** — the agent only updates existing tickets you point it to; it never transitions status or changes assignee
-- **Confluence page fetching** — the agent reads live Confluence pages via the MCP server when you provide a URL as input material; the MCP server must be running for this to work
-- **Document History Tickets column** — left blank unless you explicitly provide a ticket reference
+- **Metrics are written automatically** — no manual prompting needed; the PostToolUse hook updates the metrics JSON whenever a key file is written or a publish tool fires
 
 ---
 
 ## Troubleshooting
 
 **MCP server not starting — "uv: command not found"**
-Use the full path to uv in Command Prompt or PowerShell:
-```
-%APPDATA%\Python\Python314\Scripts\uv.exe run msc-mcp-server
-```
+Ensure `uv` is installed and on your PATH. See `docs/SETUP.md` for installation instructions.
 
 **Port 8080 already in use**
 The MCP server from a previous session is still running — no action needed. If you need to restart it, close the previous terminal first.
@@ -462,7 +481,7 @@ The MCP server from a previous session is still running — no action needed. If
 **Claude is not responding to `/ba-workflow`**
 Make sure you are in the correct project directory when you launch Claude Code:
 ```bash
-cd "C:\Users\[your_user]\MSC_BA_Agent\MSC_BA_Agent"
+cd /path/to/MSC--BA-agent
 codemie-claude
 ```
 
@@ -470,7 +489,10 @@ codemie-claude
 Your API token may have expired. Generate a new one at `https://id.atlassian.com/manage/api-tokens` and update `mcp/.env`. See `docs/SETUP.md` for details.
 
 **Confluence draft is empty after publishing**
-This happens when the HTML body is not correctly escaped in the API call. The agent uses Python `json.dump()` to avoid this — if it recurs, re-run the publish step.
+The agent uses Python `json.dump()` to avoid HTML escaping issues — if it recurs, re-run the publish step.
 
 **Output files look wrong or incomplete**
 Run option **4 — Validate and publish** to get a validation report. It will flag exactly what needs to be fixed before publishing.
+
+**Metrics file not updating**
+The PostToolUse hook requires `python3` to be on your PATH. Run `python3 --version` to verify. If the hook fails silently, the metrics bash blocks in `ba-workflow.md` can be run manually to backfill the data.

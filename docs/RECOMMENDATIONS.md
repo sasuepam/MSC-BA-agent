@@ -1,151 +1,126 @@
 # Recommendations & Best Practices
 
-Lessons from 6 rounds of production testing. Read this before your first real interface.
+Guidance for getting the best results from the MSC Mule BA Agent.
 
 ---
 
-## Before You Start Any Interface
+## Before You Start
 
-### Always run /import-ia first
-Before generating any pages, run `/import-ia` with the IA page ID. It shows:
-- Exact field counts (verify these match what you see in Confluence)
-- Headers found (check none are blocked/hallucinated)
-- Downstream systems (if 2+ → you'll need 2+ SAPI pages)
-- Deep nesting warnings (fields you'd otherwise miss)
+### Gather all input materials before opening the workflow
 
-This 30-second check prevents 90% of generation issues.
+The agent can only work from what you provide. Before running `/ba-workflow`, collect:
 
-### Confirm field counts before generation
-After `/import-ia`, Claude shows "Found 87 request fields, 64 response fields." 
-Open the actual IA in Confluence and count — or spot-check 10 fields. 
-If the counts diverge significantly, use `confluence_get_markdown` to inspect manually before proceeding.
+- The requirements source (email thread, Teams message, meeting notes, Confluence page URL, Jira ticket)
+- The requirement ID (`NEW-XXXX`) — available from the backlog
+- Any sequence diagrams or architecture notes relevant to the feature
+- Interface IDs involved (e.g. INT118, INT025) and whether each is new or an existing change
 
----
+The more complete your input, the fewer `[TO BE CONFIRMED]` gaps in the output — and the fewer validation BLOCKERs you'll need to resolve.
 
-## During Generation
+### Know whether you need a spec first
 
-### One page at a time — don't rush
-The tool generates pages sequentially on purpose. Review each preview carefully before approving:
-- MUL: check every field in Request Body and Response Body sections
-- EAPI: verify all request fields are mapped, no extra headers
-- PAPI: check the Overall Mapping section — it must have one row per IA field
-- SAPI: confirm it covers only ONE downstream system's endpoint
-
-### Use /preview before every publish
-The preview renders the Confluence HTML in a browser panel. Issues visible in preview:
-- Tables that don't render (malformed HTML)
-- Missing sections
-- Obvious hallucinated content
-- Layout problems
-
-Takes 10 seconds. Worth it every time.
-
-### Validate immediately after generation
-Right after all 4 pages are created, run `/validate` with all page IDs and the IA.
-The coverage report will show exactly what's missing or wrong while the context is fresh.
+- **New feature, no existing spec:** use option 3 (full end-to-end) or option 1 (spec only, then continue later)
+- **Spec already exists:** use option 2 (stories only) → from spec
+- **Providing interface names directly without a spec:** use option 2 → direct input
+- **Returning to a feature you started before:** use option 4 (validate and publish)
 
 ---
 
-## Known Issues to Watch For
+## Spec Phase
 
-### SAPI scope bleed (most common critical issue)
-**Symptom:** SAPI page has 2x expected rows, contains fields from another downstream system.
-**Cause:** arch-reader extracted both systems' mappings and sapi-generator included both.
-**Fix:** Run `/validate` — it catches this. Then `/update` to remove wrong-system rows.
-**Prevention:** After SAPI generation, manually check that every row in Data Mapping maps to `sapi_path` only.
+### Resolve TBCs before generating stories
 
-### Hallucinated MSC headers
-**Symptom:** MUL or EAPI page contains `MSC-Agency-Id`, `MSC-Market-Code`, etc. not in the IA.
-**Cause:** These headers appear in other MSC interfaces, and the model sometimes adds them.
-**Fix:** Pre-write hook catches these automatically. If a page already exists with them, `/validate` flags them.
-**Prevention:** The pre-write hook blocks them. If you see a hook warning about blocked headers, always check if that header is actually in the IA before overriding.
+Stories inherit gaps from the spec. A `[TO BE CONFIRMED]` in a spec field becomes a BLOCKER in validation after stories are generated. It's faster to fill in TBCs in the spec first, before running story generation.
 
-### Requiredness text simplified
-**Symptom:** Long conditional string like "Optional - Required for Lead Passenger if payment type is KLARNA" is shortened to just "Conditional".
-**Cause:** The model summarizes rather than copies.
-**Fix:** `/validate` catches requiredness mismatches. `/update` to fix with exact IA text.
-**Prevention:** After generation, scan the Required column of MUL for any rows that look "too short" for what you know is a conditional field.
+After the spec is saved, the agent lists all `[TO BE CONFIRMED]` fields. Work through them before continuing.
 
-### Deep nested response fields missing
-**Symptom:** `_warnings[]` has 4 rows but the IA has 16 (missing `_warnings[].causes[].source.name`, etc.)
-**Cause:** The model stops extracting at 2 levels of nesting.
-**Fix:** `/import-ia` now warns about deep nesting. After generation, manually count `_warnings` rows vs IA.
-**Prevention:** If IA has `_warnings[].causes[].source.layer` in the response table — that's 5 levels. Explicitly tell Claude: "The response has deep nesting — make sure to include all levels."
+### Be explicit about ADF interfaces
+
+If the source materials mention ADF-prefixed interfaces (e.g. ADF108), they should appear in the spec's Use Cases for context — but explicitly note they are ADF and out of scope for the MuleSoft team. This prevents them from being misclassified during story generation.
+
+### Give the agent the full email thread, not a summary
+
+The agent extracts business rules, constraints, and edge cases from raw text. A paraphrase loses detail. Paste the full email or meeting notes — the agent will filter what's relevant.
 
 ---
 
-## Working With Real Interfaces (Not INT004.4)
+## Stories Phase
 
-### First time with a new interface
-1. Run `/import-ia` with the IA page ID
-2. Read the output carefully — look for anything unexpected
-3. Run `/status` to see what's already done
-4. Start with `/generate` only if nothing exists yet
-5. If pages exist but are outdated → use `/validate` first to see the gap, then `/propagate`
+### Check the ADF exclusion list
 
-### When the IA changes mid-design
-1. Read the new IA with `/import-ia` — see what changed
-2. Run `/diff` between old and new IA (if you have the old page ID)
-3. Use `/propagate` to push each changed field across all pages
-4. Run `/validate` at the end to confirm consistency
+After stories are generated, confirm the ADF exclusion list matches your expectations. If a non-ADF interface was accidentally excluded, or an ADF interface appeared in a story, run `/ba-amend` to fix it before publishing.
 
-### Multiple downstream systems
-If the SA shows 2+ downstream systems (e.g., DTS + Datatrans):
-- Expect 2 SAPI pages
-- Tell Claude explicitly: "This interface has 2 downstream systems. Generate separate SAPI pages."
-- After both SAPIs are created, verify each covers only its own system
+### Verify the CR/US split
+
+Review the story type assigned to each interface:
+- Every **new** interface should be a User Story
+- Every **existing interface change** should be a Change Request
+- The same logical change across multiple existing interfaces should be **one CR**, not separate CRs
+
+If the split is wrong, the validator will catch it as a BLOCKER (Rule 5). Fix it in the amend phase.
+
+### One story file per CR or User Story
+
+Each story is saved as a separate `.md` file named `<req-id>-[slug]-cr-001.md` or `<req-id>-[slug]-us-001.md`. If you're updating an existing Jira ticket, the story filename makes it easy to identify which file maps to which ticket.
 
 ---
 
-## Performance Tips
+## Validation Phase
 
-### Provide all URLs upfront
-The more context you give at the start, the fewer interruptions. Ideal `/generate` input:
-```
-Generate INT006. 
-IA: [url or page ID]
-Functional Spec: [url or page ID]  
-Solution Architecture: [url or page ID]
-Note: 2 downstream systems — ServiceNow and Salesforce.
-```
+### Always validate before publishing
 
-### Use page IDs not URLs
-`4476535093` is faster than the full Confluence URL. Claude accepts both but page IDs are cleaner.
+Even if the spec and stories look correct, the validator catches issues that are easy to miss manually — vague acceptance criteria, missing system owners, use cases without test coverage, and business requirements with no traceable story. Run it every time.
 
-### For incremental work, don't re-read what hasn't changed
-If you're only fixing one field in PAPI, just provide the PAPI page ID. Claude will read it directly rather than re-reading all 4 pages.
+### Treat BLOCKERs as mandatory
+
+BLOCKERs (TBC fields, ADF slippage, wrong CR/US splits) must be resolved before publishing. The workflow enforces this, but if you bypass it you risk pushing incomplete or miscategorised stories to Jira.
+
+### Re-validate after amendments
+
+The amend phase can resolve one flag while inadvertently introducing an edge case elsewhere (e.g. editing an acceptance criterion incorrectly). A quick re-validation after `/ba-amend` confirms you are clean before publishing.
 
 ---
 
-## Quality Checklist Before Promoting to Production
+## Amend Phase
 
-Run through these before moving any page from sandbox to production:
+### Accept where you can, edit where you must
 
-- [ ] `/validate` passes with 0 critical issues
-- [ ] All 4 pages created (MUL, EAPI, PAPI, SAPI)
-- [ ] SAPI scope: each SAPI covers exactly one downstream system
-- [ ] No blocked headers in any page
-- [ ] Requiredness text matches IA exactly (especially conditional strings)
-- [ ] Deep nested fields present (count `_warnings` rows if applicable)
-- [ ] EAPI error section: no `causes[]` arrays
-- [ ] PAPI has "Overall Mapping" H3 with one row per IA field
-- [ ] Page titles follow MSC naming format
-- [ ] Pages are under correct sandbox parent IDs
-- [ ] Designer reviewed previews and approved each page
+"Accept fix" applies the agent's suggested resolution automatically — use it for mechanical fixes (removing TBC placeholders with confirmed values, removing ADF stories). "Edit manually" is for cases where you know the right content and want to control it exactly.
+
+### Don't skip BLOCKERs unless you have a plan
+
+Skipping a BLOCKER is allowed but the workflow warns you. If you skip because you need to confirm a value with a stakeholder, note the FLAG number so you can come back to it with `/ba-amend` after the spec is updated.
 
 ---
 
-## Getting Help
+## Publishing
 
-**In Claude Code:** just ask. Examples:
-```
-"I'm confused about the SAPI scope — help me understand"
-"What should the source.name be for DTS errors?"
-"Is this page structure correct? [paste HTML snippet]"
-```
+### Confluence: always review the draft before publishing
 
-**Reference implementation:** INT004.4 Klarna pages are in `knowledge/confluence-examples/`. 
-These are the gold standard — compare your generated pages against them.
+The agent updates BA sections and appends a Document History row. Before the SA publishes the draft, check:
+- The Document History version number and sections updated are correct
+- All `[TO BE CONFIRMED]` markers are gone
+- The SA-owned sections (Solution Overview, Involved Interfaces, Sequence Diagrams, Monitoring & Alerting Guidelines) are unchanged
 
-**Design standards:** all 13 official MSC documents are in `knowledge/design-standards/`.
-Claude can answer any question from these, or you can read them directly.
+### Jira: confirm the ticket mapping before updating
+
+When publishing multiple stories, double-check which story file maps to which Jira ticket — especially if CRs cover multiple interfaces. The agent will ask you to confirm before writing.
+
+### Don't close the MCP server terminal mid-session
+
+If the MCP server stops, Jira and Confluence publish calls will fail. Keep the MCP server terminal open for the full duration of your session. If it stops unexpectedly, restart it with `uv run msc-mcp-server` from the `mcp/` directory.
+
+---
+
+## Metrics
+
+### Use `/ba-metrics` to spot patterns
+
+After a few features, run `/ba-metrics --trend` to see where time is being spent and whether template compliance is improving. Common patterns:
+- High feedback loop count → input materials are incomplete; gather more context upfront
+- High structural fix rate (>10%) → CR/US split decisions are being corrected frequently; review the splitting rules
+- Long spec phase duration → complex features with many TBCs; resolve gaps before generating stories
+
+### Weekly report
+
+A weekly summary report runs automatically every Friday at 5pm and is saved to `output/metrics/weekly_reports/`. Run `/ba-metrics-report` manually at any time to generate it on demand.

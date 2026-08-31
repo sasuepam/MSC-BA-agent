@@ -118,7 +118,7 @@ You also need an **Atlassian API token** for MSC Jira and Confluence. Generate o
 
 ```bash
 git clone https://github.com/sasuepam/MSC-BA-agent.git
-cd MSC-BA-agent
+cd MSC-BA-agent  # or whatever you named the folder
 ```
 
 ### Step 2 — Run the setup wizard
@@ -175,13 +175,13 @@ Every time you start a session:
 
 **Terminal 1 — start the MCP server:**
 ```bash
-cd MSC-BA-agent/mcp
+cd mcp
 uv run msc-mcp-server
 ```
 
 **Terminal 2 — open Codemie:**
 ```bash
-cd MSC-BA-agent
+cd MSC-BA-agent  # or whatever you named the folder
 codemie-claude
 ```
 
@@ -197,7 +197,7 @@ Type `/ba-workflow` and you'll see a menu:
 
 ```
 1. Generate functional spec only
-2. Generate stories from existing spec
+2. Generate stories (from existing spec, or provide interface names directly)
 3. Full end-to-end (spec → stories → validate → amend → publish)
 4. Validate and publish existing artefacts
 ```
@@ -210,7 +210,7 @@ Type `/ba-workflow` and you'll see a menu:
 
 The spec phase invokes the `functional-spec-generator` agent. You provide your input materials at the prompt.
 
-**What it produces:** `output/specs/functional_spec_[feature_name].html`
+**What it produces:** `output/specs/functional_spec_<req-id>_[feature_name].html`
 
 The spec has 11 sections. The agent fills the BA-owned sections (1–5, 9, 11) from your materials and leaves the SA-owned sections (6–8, 10) blank for the Solution Architect to complete later.
 
@@ -236,7 +236,7 @@ The spec has 11 sections. The agent fills the BA-owned sections (1–5, 9, 11) f
 
 The stories phase invokes the `ba-story-generator` agent. It reads the spec you just created.
 
-**What it produces:** `output/stories/[feature_name].html`
+**What it produces:** `output/stories/<req-id>-[slug]-cr-001.md / us-001.md`
 
 **CR vs US — the splitting rule:**
 
@@ -253,6 +253,7 @@ The stories phase invokes the `ba-story-generator` agent. It reads the spec you 
 - The saved file path
 - CR count and US count
 - A list of any ADF interfaces that were excluded
+- Template compliance per story (Pass / issues found)
 - Any remaining gaps
 
 ---
@@ -310,7 +311,7 @@ After validation passes (zero BLOCKERs), you choose where to publish:
 
 **Important:** Confluence pages are always saved as **drafts**. You must open the page and publish it manually after reviewing.
 
-After publishing, the agent asks you to run `/cost` and enter the token and cost values — these are saved to your metrics file.
+Metrics are written automatically — no manual input needed. The PostToolUse hook updates the metrics JSON whenever a key output file is written or a publish tool fires.
 
 ---
 
@@ -321,7 +322,11 @@ After publishing, the agent asks you to run `/cost` and enter the token and cost
 | `/ba-workflow` | Main entry point — presents the 4-option menu | Start of every feature session |
 | `/ba-amend` | Interactive flag resolution | Manually re-run amendments, or when called by `/ba-workflow` |
 | `/ba-metrics` | Summary table of all tracked features | Review your output at any time |
-| `/ba-metrics --detail [slug]` | Per-phase breakdown for one feature | Deep dive on a single feature |
+| `/ba-metrics --detail [slug]` | Full per-phase breakdown for one feature | Deep dive on a single feature |
+| `/ba-metrics --week` | This week's features only | Weekly progress check |
+| `/ba-metrics --csv` | Export all metrics to CSV | Reporting |
+| `/ba-metrics --trend` | Improvement trends across all features | Quality review |
+| `/ba-metrics-report` | Generate the weekly BA metrics report | On demand, or runs automatically Fridays 5pm |
 | `/setup` | First-time setup wizard | First install only, or to update credentials |
 | `/setup verify` | Ping MCP server and check all integrations | After install, or when troubleshooting connectivity |
 
@@ -335,7 +340,8 @@ output/
 │   └── functional_spec_[feature_name].html      ← 11-section spec, plain HTML
 │
 ├── stories/
-│   └── [feature_name].html                      ← CRs and User Stories, plain HTML
+│   ├── <req-id>-[slug]-cr-001.md               ← one file per Change Request
+│   └── <req-id>-[slug]-us-001.md               ← one file per User Story
 │
 ├── validation/
 │   └── validation-report.md                     ← Flag list with severities
